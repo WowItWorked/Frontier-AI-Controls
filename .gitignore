@@ -1,0 +1,7 @@
+# Local tooling / editor config (not part of the deliverable)
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp

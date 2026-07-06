@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontier AI Controls Dashboard</title>
+
+<!-- ============================================================================
+     Frontier AI security controls brief — interactive dashboard.
+     Self-contained: no build step, no dependencies. Open this file in a browser.
+
+     HOW TO EDIT
+     -----------
+     • All content lives in the DATA section (search "===== DATA =====").
+       Controls, vendors, comparison scores, third-party expectations, and the
+       end-state pillars are plain JS objects/arrays — edit them and reload.
+     • Design tokens (colors, fonts, radii) live in the :root block below.
+     • View rendering lives in the RENDER section. Each view has its own
+       function (viewOverview, viewControls, viewTools, viewCompare,
+       viewEndState, viewProgress).
+     ========================================================================== -->
+
+<style>
+/* ---- Google Fonts substitutes for PNC's licensed brand faces ---- */
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300..800;1,400..600&family=Source+Serif+4:opsz,wght@8..60,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* --- Brand core --- */
+  --pnc-orange:#F58025; --pnc-orange-600:#E06E14; --pnc-orange-700:#C75E0B; --pnc-orange-100:#FDEAD7; --pnc-orange-050:#FEF6EE;
+  --pnc-blue:#0069AA; --pnc-blue-600:#005A93; --pnc-blue-700:#004A79; --pnc-blue-100:#D7EBF5; --pnc-blue-050:#EFF7FB;
+  --pnc-navy:#10314F; --pnc-navy-700:#0B2438; --pnc-navy-900:#07182A;
+  /* --- Neutrals --- */
+  --gray-000:#FFFFFF; --gray-025:#FAFAFA; --gray-050:#F4F5F6; --gray-100:#E9EBED; --gray-200:#D7DBDF;
+  --gray-300:#BCC2C8; --gray-400:#97A0A8; --gray-500:#6B747C; --gray-600:#4D555C; --gray-700:#353B41;
+  --gray-800:#23282C; --gray-900:#14171A;
+  /* --- Semantic fg / bg / line --- */
+  --fg-1:var(--gray-900); --fg-2:var(--gray-600); --fg-3:var(--gray-500); --fg-onbrand:#FFFFFF; --fg-link:var(--pnc-blue);
+  --bg-1:#FFFFFF; --bg-2:var(--gray-050); --bg-3:var(--gray-100); --bg-brand:var(--pnc-navy);
+  --line-1:var(--gray-200); --line-2:var(--gray-300); --line-focus:var(--pnc-blue);
+  /* --- Status --- */
+  --success:#1B7F4B; --success-bg:#E7F4EC; --success-line:#BFE0CC;
+  --warning:#B5740A; --warning-bg:#FBF1DD; --warning-line:#ECD3A0;
+  --danger:#C0392B; --danger-bg:#FBEAE8; --danger-line:#EFC4BF;
+  --info:#0069AA; --info-bg:#EFF7FB; --info-line:#C5E2F0;
+  /* --- Risk severity --- */
+  --risk-critical:#8E1B12; --risk-critical-bg:#F7E4E2;
+  --risk-high:#C0392B; --risk-high-bg:#FBEAE8;
+  --risk-medium:#B5740A; --risk-medium-bg:#FBF1DD;
+  --risk-low:#1B7F4B; --risk-low-bg:#E7F4EC;
+  --risk-info:#6B747C; --risk-info-bg:#F4F5F6;
+  /* --- Type families --- */
+  --font-sans:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* --- Radii --- */
+  --radius-xs:2px; --radius-sm:4px; --radius-md:6px; --radius-lg:10px; --radius-xl:16px; --radius-pill:999px;
+  /* --- Elevation --- */
+  --shadow-xs:0 1px 2px rgba(16,49,79,0.06);
+  --shadow-sm:0 1px 3px rgba(16,49,79,0.08), 0 1px 2px rgba(16,49,79,0.06);
+  --shadow-md:0 4px 10px rgba(16,49,79,0.08), 0 2px 4px rgba(16,49,79,0.06);
+  --shadow-lg:0 12px 28px rgba(16,49,79,0.12), 0 4px 8px rgba(16,49,79,0.06);
+}
+
+html, body { margin:0; background:var(--bg-2); }
+* { box-sizing:border-box; }
+a { color:inherit; }
+
+/* ---- Mobile top bar / menu / search (shown only <=900px) ---- */
+.m-only { display:none; }
+.m-bar { display:flex; align-items:center; gap:12px; padding:11px 14px; background:var(--pnc-navy); color:#fff; }
+.m-iconbtn { display:grid; place-items:center; width:38px; height:38px; flex:none; background:rgba(255,255,255,0.08); border:none; border-radius:var(--radius-sm); color:#fff; cursor:pointer; padding:0; }
+.m-iconbtn:active { background:rgba(255,255,255,0.16); }
+.m-drawer a { border-radius:0 !important; margin-bottom:0 !important; padding:13px 16px !important; border-bottom:1px solid rgba(255,255,255,0.07); }
+.m-search input:focus { outline:none; border-color:var(--pnc-orange); }
+
+/* ---- Responsive (ported from prototype) ---- */
+@media (max-width: 900px) {
+  [data-r="shell"] { flex-direction:column !important; height:auto !important; min-height:100vh !important; overflow:visible !important; }
+  [data-r="side"] { display:none !important; }
+  .m-only { display:block; position:sticky; top:0; z-index:40; box-shadow:var(--shadow-md); }
+  [data-r="main"] { height:auto !important; }
+  [data-r="scroll"] { overflow-y:visible !important; }
+  [data-r="search"] { display:none !important; }
+  [style*="grid-template-columns:repeat(2"] { grid-template-columns:1fr !important; }
+  [style*="grid-template-columns:repeat(3"] { grid-template-columns:1fr !important; }
+  [style*="grid-template-columns:repeat(5"] { grid-template-columns:1fr !important; }
+  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns:1fr 1fr !important; }
+  [style*="minmax(380px,430px)"] { grid-template-columns:1fr !important; }
+  [style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr !important; }
+  [style*="grid-template-columns:240px 1fr 128px 176px 26px"] { grid-template-columns:1fr !important; gap:10px !important; }
+  [style*="grid-template-columns:1.2fr 1fr 1fr"] { grid-template-columns:1fr !important; }
+  [data-r="scrollx"] { overflow-x:auto !important; overflow-y:hidden !important; -webkit-overflow-scrolling:touch; }
+  [data-r="scrollx"] > * { min-width:660px; }
+}
+@media (max-width: 560px) {
+  [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns:1fr !important; }
+  [style*="padding:28px"] { padding:16px !important; }
+  [data-r="scrollx"] > * { min-width:600px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+"use strict";
+
+/* ========================================================================== *
+ *  ===== DATA =====                                                          *
+ *  Everything the dashboard shows. Edit here.                                *
+ * ========================================================================== */
+
+const CONTROLS = [
+  { rank: 1, id: "c1", name: "Continuous autonomous exposure validation", tag: "Always-on AI red teaming", value: "Critical", baseline: "Partial",
+    layer: "Assurance layer — the feedback loop that measures whether every other control actually works.",
+    ifFails: "We manage risk on assumptions; exploitable gaps sit open between assessments and the adversary finds them first.",
+    why: "AI attack agents probe every path in parallel, around the clock — a point-in-time pentest measures last quarter’s risk. Continuous autonomous validation is the one control that answers “are we exploitable right now,” and it feeds every other control with proof instead of theory.",
+    shift: [
+      { f: "Annual red team, monthly scan cycles", t: "Always-on autonomous red teaming across the estate" },
+      { f: "Findings ranked by severity score", t: "Findings ranked by proven, validated kill chain" },
+      { f: "Point-in-time assessment report", t: "Continuous, decision-grade evidence of posture" }
+    ],
+    measure: ["Share of the estate under continuous validation", "Median time from exposure to validated finding", "Open validated kill chains to crown-jewel systems"],
+    tools: ["Armadin", "XBOW", "Horizon3.ai", "Pentera", "Picus"] },
+  { rank: 2, id: "c2", name: "Phishing-resistant MFA & identity proofing", tag: "FIDO2 everywhere, verified resets", value: "Critical", baseline: "In place",
+    layer: "Identity perimeter — the first barrier between an outside attacker and an inside foothold.",
+    ifFails: "Credential phishing and helpdesk social engineering hand over legitimate access, and every later control is left defending against a ‘trusted’ user.",
+    why: "Generated voice, video, and tailored lures collapse the cost of convincing impersonation. OTP, push approvals, and helpdesk resets — the residual weak points of a mature MFA program — are now the front door of most modern intrusions.",
+    shift: [
+      { f: "OTP and push-based MFA", t: "FIDO2 passkeys for the entire workforce" },
+      { f: "Helpdesk resets on voice recognition", t: "Verified identity for every reset — no exceptions" },
+      { f: "Convenience carve-outs for executives", t: "Executives held to the strictest standard" }
+    ],
+    measure: ["FIDO2 coverage across workforce and contractors", "Resets completed without verified identity", "MFA-fatigue and push-bombing events"],
+    tools: ["Okta", "Microsoft Entra ID", "Yubico"] },
+  { rank: 3, id: "c3", name: "Machine-speed vulnerability remediation", tag: "Hours, not 30-day SLAs", value: "Critical", baseline: "In place",
+    layer: "Prevention layer — closes exploitable openings before they can be used.",
+    ifFails: "Known-exploitable vulnerabilities stay open past the exploit window, and initial access becomes routine for an AI-equipped attacker.",
+    why: "Exploit development is compressing from weeks to hours, and finding volume grows faster than human remediation capacity. A 30-day patch SLA — fully compliant under current policy — concedes the entire window to an AI-equipped attacker.",
+    shift: [
+      { f: "30-day SLAs by severity band", t: "Hours for exploitable, internet-facing exposure" },
+      { f: "CVSS-ordered patch queues", t: "Exploitability-based prioritization from validation" },
+      { f: "Manual tickets and fix research", t: "Auto-generated fixes, verified by re-test" }
+    ],
+    measure: ["Median time-to-remediate validated exploitable findings", "Share of fixes auto-generated and merged", "Age of oldest internet-facing exploitable exposure"],
+    tools: ["Mobb", "Keygraph Shannon", "Strix"] },
+  { rank: 4, id: "c4", name: "Zero standing privilege", tag: "Just-in-time, time-boxed elevation", value: "Critical", baseline: "In place",
+    layer: "Privilege layer — limits what any single compromised identity is able to do.",
+    ifFails: "One phished account becomes domain-wide control; standing admin turns a foothold into a full takeover in minutes.",
+    why: "Agentic attackers chain identity misconfigurations in minutes — faster than any recertification cycle can catch. Standing admin rights are the fuel for machine-speed lateral movement; removing them starves the attack chain.",
+    shift: [
+      { f: "Standing admin accounts", t: "Just-in-time, time-boxed elevation" },
+      { f: "Quarterly access recertification", t: "Continuous entitlement analytics and auto-revocation" },
+      { f: "Shared break-glass credentials", t: "Isolated, recorded, monitored sessions" }
+    ],
+    measure: ["Count of standing privileged accounts", "Median elevation duration", "Entitlement anomalies auto-revoked per month"],
+    tools: ["CyberArk", "Microsoft Entra ID"] },
+  { rank: 5, id: "c5", name: "Non-human identity governance", tag: "Keys, service accounts, agent credentials", value: "High", baseline: "Partial",
+    layer: "Machine-identity layer — governs the credentials that outnumber and outlast human ones.",
+    ifFails: "Orphaned keys and over-privileged service and agent accounts become persistent backdoors that survive offboarding and password resets.",
+    why: "Service accounts, API keys, and AI-agent credentials outnumber people many times over and are the least-governed identities in the estate. Every new agent deployment multiplies them — and each ungoverned credential is a ready-made attack path.",
+    shift: [
+      { f: "Untracked keys and service accounts", t: "Full NHI inventory with named owners" },
+      { f: "Static, long-lived secrets", t: "Rotation and short-lived credentials by default" },
+      { f: "Broad service scopes", t: "Least privilege per key, token, and agent" }
+    ],
+    measure: ["Non-human identities without a named owner", "Median secret age", "Agent credentials with write access to production"],
+    tools: ["Astrix Security", "CyberArk", "SailPoint"] },
+  { rank: 6, id: "c6", name: "AI-aware detection & autonomous response", tag: "Pre-approved containment at machine speed", value: "High", baseline: "In place",
+    layer: "Detection & response layer — catches and contains what prevention misses.",
+    ifFails: "Intrusions dwell undetected or are contained too slowly, and machine-speed lateral movement finishes before humans can react.",
+    why: "Lateral movement at machine speed outruns any human triage queue. If containment requires a meeting, it happens after the data is gone — response authority has to be decided before the incident, not during it.",
+    shift: [
+      { f: "Human-speed alert triage", t: "Agentic SOC triage with analyst oversight" },
+      { f: "Containment approved per incident", t: "Pre-approved auto-containment playbooks" },
+      { f: "Signature-led detections", t: "Detections tuned to AI attack patterns" }
+    ],
+    measure: ["Mean time to contain", "Share of incidents auto-contained", "Detection coverage against AI-driven TTPs"],
+    tools: ["CrowdStrike", "Microsoft Sentinel", "Dropzone AI"] },
+  { rank: 7, id: "c7", name: "Egress & shadow-AI data controls", tag: "Prompt-level DLP, sanctioned gateway", value: "High", baseline: "Partial",
+    layer: "Data-exfiltration layer — the last line before sensitive data leaves.",
+    ifFails: "Sensitive data walks out through prompts and model APIs unseen, turning an intrusion into a data-loss and regulatory event.",
+    why: "Sensitive data now leaves through prompts and model APIs, not just email and removable media. Unsanctioned AI use is invisible to legacy DLP — and banning it merely pushes it further out of sight.",
+    shift: [
+      { f: "Web and email DLP patterns", t: "Prompt-level DLP on AI traffic" },
+      { f: "Open egress to model endpoints", t: "Egress policy for model APIs" },
+      { f: "Blanket bans on AI tools", t: "A sanctioned AI gateway people actually use" }
+    ],
+    measure: ["Shadow-AI endpoints observed on the network", "Sensitive prompts blocked at the gateway", "Share of AI traffic through sanctioned paths"],
+    tools: ["Netskope", "Zscaler", "Prompt Security"] },
+  { rank: 8, id: "c8", name: "Identity-based microsegmentation", tag: "Blast-radius limits per workload", value: "High", baseline: "Partial",
+    layer: "Containment layer — caps the blast radius once an attacker is already inside.",
+    ifFails: "A single foothold reaches the whole estate; one compromised host becomes an enterprise-wide incident.",
+    why: "Swarming attacks exploit flat internal paths — one foothold becomes many in minutes. Segmentation is the control that caps the blast radius when, not if, something gets in.",
+    shift: [
+      { f: "Coarse network zones", t: "Identity- and workload-based segments" },
+      { f: "Implicit trust inside the perimeter", t: "Per-connection policy enforcement" },
+      { f: "Crown jewels segmented last", t: "Crown jewels segmented first" }
+    ],
+    measure: ["Reachable paths to crown-jewel systems", "East-west traffic under explicit policy", "Segment policy violations per month"],
+    tools: ["Illumio", "Akamai Guardicore", "Horizon3.ai"] },
+  { rank: 9, id: "c9", name: "Secure AI system lifecycle", tag: "Guardrails for our own models & agents", value: "High", baseline: "Net new",
+    layer: "Application & AI layer — secures the new systems we build and run.",
+    ifFails: "Our own models and agents become the attack path — prompt injection, tool misuse, and over-permissioned agents acting on production.",
+    why: "Our own models and agents are a new attack surface: prompt injection, tool misuse, data poisoning, and over-permissioned agents acting on production systems. No existing control family covers this — it has to be built.",
+    shift: [
+      { f: "Standard SDLC security gates", t: "AI-specific threat modeling and release gates" },
+      { f: "Agents with unrestricted tool access", t: "Permissioned tool use per agent" },
+      { f: "Ship and forget", t: "Continuous red-teaming of AI systems" }
+    ],
+    measure: ["AI systems inventoried and risk-rated", "Prompt-injection findings per assessment", "Agents with write access to production"],
+    tools: ["Protect AI", "HiddenLayer", "Lakera"] },
+  { rank: 10, id: "c10", name: "Deepfake-resilient verification", tag: "Out-of-band, dual control", value: "High", baseline: "Net new",
+    layer: "Human & process layer — protects decisions that technology alone cannot authenticate.",
+    ifFails: "A convincing voice or video authorizes fraudulent payments and changes; controls that assume ‘we recognize the caller’ fail silently.",
+    why: "Voice and video no longer prove identity, and payments, credential resets, and change approvals are exactly what an impersonation attack targets. The process must hold even when the request is indistinguishable from the real person.",
+    shift: [
+      { f: "Voice or video recognition as proof", t: "Out-of-band callback to known channels" },
+      { f: "Single approver on high-value actions", t: "Dual control regardless of who is asking" },
+      { f: "Deference to apparent seniority", t: "Verify-first culture, protected from reprisal" }
+    ],
+    measure: ["High-value actions under dual control", "Callback compliance rate", "Reported impersonation attempts"],
+    tools: ["Reality Defender", "Pindrop"] }
+];
+
+const TOOLS = [
+  { id: "armadin", name: "Armadin", cat: "Validate", domain: "Validate", controls: ["1", "8"], rankN: 4, tag: "Agentic attacker swarm — continuous red teaming with kill-chain-ranked remediation",
+    autonomy: "High — 80–90%", maturity: "Emerging · launched 2026",
+    detail: "Founded by Kevin Mandia (Mandiant); launched March 2026 with $189.9M — the largest combined Seed + Series A in cybersecurity history (Accel, Google Ventures, Kleiner Perkins, In-Q-Tel). Deploys a swarm of AI attack agents running reconnaissance, adaptive probing, and full kill-chain execution at roughly 80–90% autonomy (4–6 human decisions per campaign). Remediation guidance is prioritized by which fixes eliminate entire attack chains. Delivered with external-surface (Palo Alto Unit 42) and internal/identity (CrowdStrike) partnerships.",
+    fit: "Enterprise-wide continuous exposure validation — the most complete agentic-swarm vision; ranks below established peers only on production track record.",
+    strengths: ["Full kill-chain simulation, including post-exploitation impact", "Remediation ranked by attack-path elimination, not CVE count", "Elite red-team pedigree — methodology from operators covering most Fortune 100 environments"],
+    considerations: ["Youngest platform on the list — no multi-year production track record yet", "Requires model-risk and third-party review before production scope"],
+    links: [
+      { label: "armadin.com", url: "https://www.armadin.com" },
+      { label: "SecurityWeek · launch", url: "https://www.securityweek.com/kevin-mandias-armadin-launches-with-189-9-million-in-funding/" },
+      { label: "Unit 42 partnership", url: "https://www.paloaltonetworks.com/blog/2026/04/unit-42-frontier-ai-defense-armadin-partnership/" }
+    ] },
+  { id: "xbow", name: "XBOW", cat: "Validate", domain: "Validate", controls: ["1"], rankN: 2, tag: "Autonomous offensive testing for web applications and APIs",
+    autonomy: "High", maturity: "Scaling · $1B+ valuation",
+    detail: "Founded January 2024 by Oege de Moor, creator of GitHub Copilot. Its autonomous pentester became the first AI to top HackerOne’s US leaderboard, outperforming thousands of human researchers with 1,000+ validated vulnerability reports — the strongest independent benchmark of offensive AI capability to date. Raised a $120M Series C in March 2026 at a $1B+ valuation ($237M total); deployed at 100+ enterprises including Fortune 500 firms and large banks, with CI/CD integration to test every release.",
+    fit: "Continuous testing of the external application surface — the best independently proven offensive AI.",
+    strengths: ["First AI to top HackerOne’s US leaderboard — benchmarked against human hackers on live targets", "Automated validators confirm each finding — low false-positive rate", "Tests every release via CI/CD integration"],
+    considerations: ["Application-layer scope — not full-estate or identity attack paths", "Enterprise platform is newer than its research track record"],
+    links: [
+      { label: "xbow.com", url: "https://xbow.com" },
+      { label: "TechRepublic · HackerOne milestone", url: "https://www.techrepublic.com/article/news-ai-xbow-tops-hackerone-us-leaderboad/" },
+      { label: "SecurityWeek · Series C", url: "https://www.securityweek.com/autonomous-offensive-security-firm-xbow-raises-120m-at-1b-valuation/" }
+    ] },
+  { id: "nodezero", name: "Horizon3.ai", cat: "Validate", domain: "Validate", controls: ["1", "8"], rankN: 1, tag: "Self-service autonomous pentesting with attack-path proof",
+    autonomy: "High", maturity: "Established · 3,000+ orgs",
+    detail: "The most production-proven autonomous pentesting platform: founded 2019, used by 3,000+ organizations — including three Fortune Top 10 companies and large financial institutions — with 170,000+ autonomous pentests executed. Runs agentless internal and external tests, chains real attack paths (credential abuse, identity misconfigurations, exposed services), and verifies fixes with immediate re-tests. Supports the NSA’s Continuous Autonomous Pentesting program and FedRAMP High; $100M Series D led by NEA (2025), ~$178M total raised.",
+    fit: "Internal network and identity attack paths; find-fix-verify loops at bank scale.",
+    strengths: ["Largest real-world track record — 170,000+ autonomous pentests across 3,000+ organizations", "Fix verification built into the workflow — re-test proves remediation worked", "Strong on identity and Active Directory chains; federal-grade accreditation"],
+    considerations: ["On-demand test runs rather than a standing attacker swarm", "Web-application pentesting is a newer module"],
+    links: [
+      { label: "horizon3.ai", url: "https://horizon3.ai/nodezero/" },
+      { label: "BusinessWire · Series D", url: "https://www.businesswire.com/news/home/20250610254822/en/Horizon3.ai-Raises-%24100M-to-Cement-Leadership-in-Autonomous-Security" }
+    ] },
+  { id: "pentera", name: "Pentera", cat: "Validate", domain: "Validate", controls: ["1", "3"], rankN: 3, tag: "Automated security validation across infrastructure",
+    autonomy: "Medium–high", maturity: "Established · $100M+ ARR",
+    detail: "The automated security validation category leader: founded 2015, 1,000+ enterprise customers across 60 countries, past $100M annual recurring revenue as of January 2026 ($1B valuation). Safely executes real attack techniques — ransomware emulation, credential attacks, data exfiltration — against production infrastructure, agentless. Acquired DevOcean (AI remediation orchestration) and EVA Information Security (AI red teaming) in 2025 to close the find-to-fix loop; AI governance aligned to ISO/IEC 42001.",
+    fit: "Production-safe validation of infrastructure and control efficacy at scale.",
+    strengths: ["Deepest enterprise deployment base in security validation — ~4.5 stars on G2 and Gartner Peer Insights", "Auto-exploits before flagging — low false positives, reproducible findings", "Remediation orchestration (Pentera Resolve) turns validated findings into workflows"],
+    considerations: ["Technique-library driven — less open-ended than agentic swarm entrants", "Scheduled validation cadence, not continuous by default"],
+    links: [
+      { label: "pentera.io", url: "https://pentera.io" },
+      { label: "Wikipedia · Pentera", url: "https://en.wikipedia.org/wiki/Pentera" },
+      { label: "G2 reviews", url: "https://www.g2.com/products/pentera/reviews" }
+    ] },
+  { id: "picus", name: "Picus", cat: "Validate", domain: "Validate", controls: ["1", "6"], rankN: 5, tag: "Exposure validation tied to live control performance",
+    autonomy: "Medium–high", maturity: "Established",
+    detail: "Breach-and-attack simulation platform, now with agentic pentesting: a coordinator orchestrates specialist agents that scope, chain attack paths, and validate findings — every step explainable and auditable, with configurable human-in-the-loop from full oversight to full autonomy. Findings are matched against live detection and prevention performance.",
+    fit: "Detection and control efficacy — does the SOC actually catch it.",
+    strengths: ["Ties exposures to how controls actually performed", "Auditable agent decisions — friendly to regulated environments", "Configurable autonomy levels"],
+    considerations: ["Agentic pentest capability is newer than its BAS core", "Simulation depth versus true adversarial creativity"],
+    links: [
+      { label: "picussecurity.com", url: "https://www.picussecurity.com" },
+      { label: "Picus · autonomous pentesting", url: "https://www.picussecurity.com/resource/blog/what-is-autonomous-pentesting" }
+    ] },
+  { id: "mobb", name: "Mobb", cat: "Remediate", domain: "Remediate", controls: ["3"], rankN: 1, tag: "AI auto-remediation — ready-to-merge fixes for scanner findings",
+    autonomy: "High", maturity: "Growing",
+    detail: "Ingests findings from SAST and other scanners, then generates contextual, ready-to-merge pull requests — covering 100+ issue types — with a fix-assurance score on each remediation. Monitors new commits continuously so the backlog stops growing, and integrates with Checkmarx and other enterprise scanners.",
+    fit: "Burning down the application-security backlog — the engine behind control #3.",
+    strengths: ["Fixes delivered as reviewable PRs inside developer workflow", "Continuous commit monitoring prevents new debt", "Enterprise scanner partnerships — Checkmarx, Snyk, and others"],
+    considerations: ["First-party code focus — infrastructure patching is separate", "Fix review discipline still required; not fire-and-forget"],
+    links: [
+      { label: "mobb.ai", url: "https://mobb.ai" },
+      { label: "Help Net Security · profile", url: "https://www.helpnetsecurity.com/2023/08/01/mobb-ai-technology/" },
+      { label: "Checkmarx partnership", url: "https://checkmarx.com/blog/automating-vulnerability-remediation-with-checkmarx-one-and-mobb-ai/" }
+    ] },
+  { id: "shannon", name: "Keygraph Shannon", cat: "Remediate", domain: "Remediate", controls: ["3"], rankN: 2, tag: "White-box AI pentester that exploits, then writes verified patches",
+    autonomy: "High", maturity: "Early · OSS core",
+    detail: "Open-source autonomous white-box pentester for web apps and APIs: analyzes source code, executes real exploits to prove findings, then writes patches and re-tests them against the patched code before delivery. Supports self-hosted and air-gapped deployment with bring-your-own-key model access — source and model traffic stay inside the perimeter.",
+    fit: "Pre-production proof-and-fix loops where code cannot leave the bank.",
+    strengths: ["Exploit-proven findings — near-zero false positives", "Patches re-tested before they reach review", "Air-gap and BYOK deployment fits bank data-residency constraints"],
+    considerations: ["Early-stage; web/API coverage still expanding", "Non-production use guidance — mutative testing risk"],
+    links: [
+      { label: "GitHub · Shannon", url: "https://github.com/KeygraphHQ/shannon" }
+    ] },
+  { id: "strix", name: "Strix", cat: "Remediate", domain: "Remediate", controls: ["3", "9"], rankN: 3, tag: "Open-source agentic pentest agents with auto-fix in CI",
+    autonomy: "High", maturity: "Early · OSS",
+    detail: "Open-source multi-agent pentesters that run code dynamically, validate vulnerabilities with working proof-of-concept exploits, and generate patches and compliance-ready reports. Integrates with GitHub, GitLab, Jira, and CI/CD pipelines for continuous testing on every deployment.",
+    fit: "Shift-left exploit validation and fixing inside the development pipeline.",
+    strengths: ["PoC-validated findings with remediation patches", "Native CI/CD and ticketing integrations", "Multi-agent orchestration scales across repos"],
+    considerations: ["Self-operated OSS — engineering and support burden", "LLM provider access requires governance (keys, data flow)"],
+    links: [
+      { label: "GitHub · Strix", url: "https://github.com/usestrix/strix" }
+    ] },
+  { id: "okta", name: "Okta", cat: "Identity", domain: "Identity", controls: ["2"], tag: "Workforce identity — phishing-resistant sign-in and adaptive access",
+    autonomy: "Policy automation", maturity: "Established · market leader",
+    detail: "Independent workforce identity leader. Okta FastPass and passkey support deliver phishing-resistant, passwordless sign-in; adaptive policies and identity threat protection score risk in real time and step up or block access. Broadest app-integration network for consistent SSO and MFA across the estate.",
+    fit: "Phishing-resistant MFA and adaptive access across a heterogeneous app estate (control #2).",
+    strengths: ["FastPass + passkeys deliver phishing-resistant, passwordless sign-in", "Largest pre-built integration network — consistent MFA everywhere", "Identity Threat Protection reacts to risk mid-session"],
+    considerations: ["Helpdesk-reset verification must be hardened separately", "Concentration risk — IdP is a top-tier target"],
+    links: [ { label: "okta.com", url: "https://www.okta.com" } ] },
+  { id: "entra", name: "Microsoft Entra ID", cat: "Identity", domain: "Identity", controls: ["2", "4"], tag: "Passwordless, Conditional Access, and just-in-time admin (PIM)",
+    autonomy: "Policy automation", maturity: "Established · ubiquitous",
+    detail: "Microsoft’s cloud identity platform. Device-bound passkeys and Windows Hello give phishing-resistant MFA; Conditional Access enforces risk-based policy; Privileged Identity Management provides time-boxed, approval-gated elevation for admin roles — the backbone of zero standing privilege in Microsoft estates.",
+    fit: "Phishing-resistant MFA (control #2) and just-in-time privilege (control #4) where the estate is Microsoft-centric.",
+    strengths: ["Passkeys + Conditional Access unify strong auth and policy", "PIM delivers just-in-time, time-boxed admin elevation", "Deep integration across M365, Azure, and Windows"],
+    considerations: ["Strongest inside the Microsoft ecosystem", "Feature depth requires premium (P2) licensing"],
+    links: [ { label: "microsoft.com · Entra", url: "https://www.microsoft.com/security/business/microsoft-entra" } ] },
+  { id: "yubico", name: "Yubico", cat: "Identity", domain: "Identity", controls: ["2"], tag: "FIDO2 / WebAuthn hardware security keys",
+    autonomy: "Hardware control", maturity: "Established · standard-setter",
+    detail: "Maker of the YubiKey — the reference hardware authenticator for FIDO2/WebAuthn and smart-card auth. Hardware-bound credentials are the gold standard for phishing-resistant MFA, immune to push-bombing and credential phishing, and are commonly issued to privileged users and executives.",
+    fit: "The highest-assurance factor for privileged users and phishing-resistant MFA (control #2).",
+    strengths: ["Hardware-bound keys are immune to phishing and push fatigue", "Open FIDO2/WebAuthn standards — works across IdPs", "Ideal for admins, executives, and break-glass accounts"],
+    considerations: ["Physical distribution and lifecycle logistics at scale", "Best paired with a strong IdP, not a standalone system"],
+    links: [ { label: "yubico.com", url: "https://www.yubico.com" } ] },
+  { id: "cyberark", name: "CyberArk", cat: "Identity", domain: "Identity", controls: ["4", "5"], tag: "Privileged access, secrets, and machine-identity security",
+    autonomy: "Policy + rotation automation", maturity: "Established · PAM leader",
+    detail: "The privileged access management leader. Vaults and rotates privileged credentials, brokers isolated and recorded admin sessions, and enforces just-in-time, zero-standing-privilege access. Conjur and its machine-identity line secure secrets, service accounts, and increasingly AI-agent credentials — directly serving both control #4 and #5.",
+    fit: "Zero standing privilege (control #4) and non-human identity governance (control #5).",
+    strengths: ["Deepest PAM feature set — vaulting, session isolation, JIT", "Secrets management (Conjur) covers apps, pipelines, and agents", "Recognized leader in analyst evaluations for years"],
+    considerations: ["Program-level deployment effort, not a quick switch-on", "NHI at agent scale is a newer, fast-moving frontier"],
+    links: [ { label: "cyberark.com", url: "https://www.cyberark.com" } ] },
+  { id: "sailpoint", name: "SailPoint", cat: "Identity", domain: "Identity", controls: ["5"], tag: "Identity governance and access certification",
+    autonomy: "AI-assisted governance", maturity: "Established · IGA leader",
+    detail: "Identity governance leader. Automates access certification, provisioning, and separation-of-duties, with AI-driven recommendations to right-size entitlements. Its machine- and non-human-identity capabilities extend governance to service accounts and workloads — the discovery and ownership layer control #5 depends on.",
+    fit: "Entitlement governance and non-human identity ownership (control #5).",
+    strengths: ["Automated certification and least-privilege recommendations", "Extends governance to machine and non-human identities", "Scales to large, regulated enterprise estates"],
+    considerations: ["Value depends on connector coverage and data hygiene", "Governance workflow — pair with a PAM enforcement layer"],
+    links: [ { label: "sailpoint.com", url: "https://www.sailpoint.com" } ] },
+  { id: "astrix", name: "Astrix Security", cat: "Identity", domain: "Identity", controls: ["5"], tag: "Non-human identity security — keys, tokens, and agent credentials",
+    autonomy: "Continuous discovery", maturity: "Emerging · NHI specialist",
+    detail: "Specialist in non-human identity security. Continuously discovers and inventories service accounts, API keys, OAuth grants, and AI-agent credentials, maps their access and ownership, flags over-privilege and stale secrets, and prioritizes remediation — purpose-built for the credential sprawl that agentic AI accelerates.",
+    fit: "The dedicated inventory-and-governance layer for control #5 as agent credentials multiply.",
+    strengths: ["Purpose-built for NHI — the fastest-growing identity class", "Discovers shadow integrations and over-privileged tokens", "Maps ownership so orphaned credentials get an owner"],
+    considerations: ["Younger category — diligence on coverage and references", "Complements, not replaces, PAM and IGA"],
+    links: [ { label: "astrix.security", url: "https://astrix.security" } ] },
+  { id: "crowdstrike", name: "CrowdStrike", cat: "Detect", domain: "Detect", controls: ["6"], tag: "Endpoint/identity XDR with agentic SOC triage (Charlotte AI)",
+    autonomy: "High — agentic triage", maturity: "Established · XDR leader",
+    detail: "Falcon platform for endpoint, identity, and cloud detection and response. Charlotte AI performs agentic alert triage — autonomously investigating and scoring detections to cut analyst load — while Falcon enables rapid, policy-driven containment of compromised hosts and accounts at machine speed.",
+    fit: "AI-aware detection and fast containment across endpoint and identity (control #6).",
+    strengths: ["Agentic triage (Charlotte AI) reduces mean time to decision", "Strong endpoint + identity threat detection and containment", "Threat intelligence informs AI-driven attack detections"],
+    considerations: ["Auto-containment scope needs pre-agreed guardrails", "Full value assumes broad Falcon module adoption"],
+    links: [ { label: "crowdstrike.com", url: "https://www.crowdstrike.com" } ] },
+  { id: "sentinel", name: "Microsoft Sentinel", cat: "Detect", domain: "Detect", controls: ["6"], tag: "Cloud SIEM with agentic investigation (Security Copilot)",
+    autonomy: "High — agentic investigation", maturity: "Established · cloud SIEM",
+    detail: "Cloud-native SIEM/SOAR paired with Security Copilot agents that autonomously investigate incidents, summarize scope, and recommend or execute response. Deep telemetry across Microsoft and third-party sources, with automation playbooks for pre-approved containment.",
+    fit: "Agentic SOC investigation and automated response (control #6) in cloud-first estates.",
+    strengths: ["Security Copilot agents automate investigation and summary", "Native breadth across M365, Azure, and Defender signals", "SOAR playbooks enable pre-approved auto-containment"],
+    considerations: ["Ingestion/compute cost management at scale", "Deepest inside the Microsoft telemetry footprint"],
+    links: [ { label: "microsoft.com · Sentinel", url: "https://www.microsoft.com/security/business/siem-and-xdr/microsoft-sentinel" } ] },
+  { id: "xsiam", name: "Palo Alto Cortex XSIAM", cat: "Detect", domain: "Detect", controls: ["6"], tag: "AI-driven SOC platform unifying SIEM, SOAR, and EDR",
+    autonomy: "High — autonomous response", maturity: "Established · AI SOC",
+    detail: "Cortex XSIAM consolidates SIEM, SOAR, EDR, and attack-surface data into an AI-driven SOC platform designed to automate the bulk of detection and response, closing many incidents without human touch and escalating the rest with full context.",
+    fit: "A consolidated, automation-first SOC for machine-speed containment (control #6).",
+    strengths: ["Unifies detection and response data in one AI-driven platform", "Designed to automate high-volume incident handling", "Reduces swivel-chair between SIEM, SOAR, and EDR"],
+    considerations: ["Platform consolidation is a significant migration", "Best realized as a Palo Alto ecosystem commitment"],
+    links: [ { label: "paloaltonetworks.com · XSIAM", url: "https://www.paloaltonetworks.com/cortex/cortex-xsiam" } ] },
+  { id: "dropzone", name: "Dropzone AI", cat: "Detect", domain: "Detect", controls: ["6"], tag: "Autonomous AI SOC analyst for end-to-end alert investigation",
+    autonomy: "High — autonomous analyst", maturity: "Emerging · agentic SOC",
+    detail: "An AI SOC analyst that autonomously investigates every alert end to end — gathering context, forming and testing hypotheses, and producing a written conclusion — without playbooks. Aimed at Tier-1 triage capacity so human analysts focus on confirmed, high-value incidents.",
+    fit: "Scaling investigation capacity to machine speed alongside the existing SIEM/EDR (control #6).",
+    strengths: ["Autonomous, playbook-free investigation of every alert", "Expands triage capacity without added headcount", "Transparent written reasoning for each conclusion"],
+    considerations: ["Emerging vendor — validate on your alert types", "Augments detection tooling; not a SIEM replacement"],
+    links: [ { label: "dropzone.ai", url: "https://www.dropzone.ai" } ] },
+  { id: "netskope", name: "Netskope", cat: "Data & AI", domain: "Data & AI", controls: ["7"], tag: "SSE/SASE with inline DLP and GenAI app controls",
+    autonomy: "Inline policy enforcement", maturity: "Established · SSE leader",
+    detail: "Security Service Edge leader. Inline visibility and DLP across web, SaaS, and — critically — generative-AI apps: discovers shadow-AI usage, coaches or blocks risky prompts, and prevents sensitive data from leaving through model endpoints. Directly addresses the egress path legacy DLP cannot see.",
+    fit: "Prompt-level DLP and shadow-AI control via a sanctioned gateway (control #7).",
+    strengths: ["Inline DLP extends to prompts and GenAI app traffic", "Discovers shadow-AI usage across the workforce", "Real-time user coaching reduces risky data sharing"],
+    considerations: ["Inline architecture needs careful rollout and tuning", "Overlaps with existing proxy/CASB — rationalize the stack"],
+    links: [ { label: "netskope.com", url: "https://www.netskope.com" } ] },
+  { id: "zscaler", name: "Zscaler", cat: "Data & AI", domain: "Data & AI", controls: ["7"], tag: "Zero Trust Exchange with AI data protection",
+    autonomy: "Inline policy enforcement", maturity: "Established · SSE leader",
+    detail: "Zero Trust Exchange inspects traffic inline at scale, with data-protection and GenAI controls that govern access to AI apps, block sensitive uploads, and log prompt activity. Pairs egress control with zero-trust app access so users reach only what policy permits.",
+    fit: "Egress policy for model endpoints and sanctioned AI access (control #7).",
+    strengths: ["Massive inline inspection capacity for AI traffic", "GenAI access governance and prompt logging", "Couples data control with zero-trust app access"],
+    considerations: ["Platform commitment across access and data", "Policy tuning required to avoid business friction"],
+    links: [ { label: "zscaler.com", url: "https://www.zscaler.com" } ] },
+  { id: "prompt", name: "Prompt Security", cat: "Data & AI", domain: "Data & AI", controls: ["7", "9"], tag: "AI gateway — prompt-injection defense and shadow-AI discovery",
+    autonomy: "Inline AI guardrails", maturity: "Emerging · AI security",
+    detail: "A security layer for enterprise AI use: discovers shadow-AI tools, enforces a sanctioned gateway, redacts sensitive data in prompts, and defends homegrown AI apps and agents against prompt injection and jailbreaks at runtime — spanning both the data-egress (#7) and secure-AI-lifecycle (#9) controls.",
+    fit: "Runtime guardrails for both AI data egress (#7) and our own AI systems (#9).",
+    strengths: ["Covers both employee AI use and homegrown AI apps", "Runtime prompt-injection and jailbreak defense", "Sensitive-data redaction at the prompt layer"],
+    considerations: ["Fast-moving category — test against your AI stack", "Newer vendor — diligence on scale and support"],
+    links: [ { label: "prompt.security", url: "https://www.prompt.security" } ] },
+  { id: "protectai", name: "Protect AI", cat: "Data & AI", domain: "Data & AI", controls: ["9"], tag: "ML/AI security — model scanning, AI-BOM, MLSecOps",
+    autonomy: "Scanning + governance", maturity: "Established · acquired by Palo Alto",
+    detail: "AI/ML security platform: scans models for malicious code and vulnerabilities, generates an AI bill of materials, and secures the ML supply chain and pipelines (MLSecOps). Acquired by Palo Alto Networks in 2025 to anchor its AI security portfolio — a defensive complement to red-teaming the AI lifecycle.",
+    fit: "Securing the model supply chain and AI development lifecycle (control #9).",
+    strengths: ["Model scanning catches supply-chain and serialization threats", "AI-BOM brings inventory and provenance to ML assets", "MLSecOps integrates security into the ML pipeline"],
+    considerations: ["Focused on the build/supply side — pair with runtime defense", "Portfolio integrating post-acquisition"],
+    links: [ { label: "protectai.com", url: "https://www.protectai.com" } ] },
+  { id: "hiddenlayer", name: "HiddenLayer", cat: "Data & AI", domain: "Data & AI", controls: ["9"], tag: "AI detection & response — protects deployed models",
+    autonomy: "Runtime monitoring", maturity: "Emerging · AI security",
+    detail: "Security for deployed models: monitors for adversarial attacks, model theft, evasion, and prompt-based exploitation without needing access to model internals, and adds red-teaming for AI. A runtime detection-and-response layer for production AI systems.",
+    fit: "Runtime protection and monitoring of production models (control #9).",
+    strengths: ["Detects adversarial and evasion attacks at runtime", "Model-agnostic — no access to internals required", "Adds AI red-teaming to the assurance program"],
+    considerations: ["Emerging category — validate against your models", "Runtime focus — combine with supply-chain scanning"],
+    links: [ { label: "hiddenlayer.com", url: "https://hiddenlayer.com" } ] },
+  { id: "lakera", name: "Lakera", cat: "Data & AI", domain: "Data & AI", controls: ["9"], tag: "Real-time GenAI guardrails against prompt injection",
+    autonomy: "Inline AI guardrails", maturity: "Emerging · AI security",
+    detail: "Real-time security guardrails for GenAI applications, defending against prompt injection, jailbreaks, and data leakage. Known for the Gandalf research project and a large adversarial dataset; acquired by Check Point in 2025 to bolster AI security. Protects agentic apps at the input/output boundary.",
+    fit: "Input/output guardrails for homegrown AI apps and agents (control #9).",
+    strengths: ["Purpose-built prompt-injection and jailbreak defense", "Backed by large real-world adversarial research data", "Low-latency inline protection for agentic apps"],
+    considerations: ["Guardrail layer — not a full lifecycle program", "Integrating under Check Point post-acquisition"],
+    links: [ { label: "lakera.ai", url: "https://www.lakera.ai" } ] },
+  { id: "illumio", name: "Illumio", cat: "Segment", domain: "Segment", controls: ["8"], tag: "Zero Trust segmentation to cap blast radius",
+    autonomy: "Policy automation", maturity: "Established · segmentation leader",
+    detail: "Zero Trust segmentation leader. Maps application dependencies and enforces host- and workload-based policy so a foothold cannot spread laterally — containing ransomware and swarming attacks by design. Recognized leader in microsegmentation evaluations.",
+    fit: "Identity- and workload-based microsegmentation of crown-jewel systems (control #8).",
+    strengths: ["Dependency mapping makes segmentation policy tractable", "Host/workload enforcement caps east-west blast radius", "Proven at enterprise scale for ransomware containment"],
+    considerations: ["Segmentation is a phased, crown-jewels-first program", "Requires accurate application dependency data"],
+    links: [ { label: "illumio.com", url: "https://www.illumio.com" } ] },
+  { id: "guardicore", name: "Akamai Guardicore", cat: "Segment", domain: "Segment", controls: ["8"], tag: "Microsegmentation with granular east-west enforcement",
+    autonomy: "Policy automation", maturity: "Established",
+    detail: "Software-defined microsegmentation with detailed east-west traffic visualization and granular, identity-aware policy across data-center and cloud workloads — narrowing lateral-movement paths to crown-jewel systems.",
+    fit: "Granular east-west segmentation and lateral-movement reduction (control #8).",
+    strengths: ["Detailed east-west flow visibility guides policy", "Granular, identity-aware segmentation rules", "Backed by Akamai’s platform and scale"],
+    considerations: ["Policy modeling effort across complex estates", "Overlaps with existing network controls — rationalize"],
+    links: [ { label: "akamai.com · Guardicore", url: "https://www.akamai.com/products/akamai-guardicore-segmentation" } ] },
+  { id: "realitydefender", name: "Reality Defender", cat: "Verify", domain: "Verify", controls: ["10"], tag: "Real-time deepfake detection across voice, video, and images",
+    autonomy: "Real-time detection", maturity: "Emerging · deepfake detection",
+    detail: "Real-time deepfake detection across audio, video, and images, delivered via API and integrations into meeting and call workflows. Flags synthetic media so verification steps and human approvers are not fooled by a convincing fake voice or face.",
+    fit: "A detection signal that strengthens deepfake-resilient verification (control #10).",
+    strengths: ["Multimodal detection — voice, video, and images", "API and real-time meeting/call integrations", "Adds a technical check on top of out-of-band process"],
+    considerations: ["Detection is probabilistic — keep process controls primary", "Adversarial arms race — continuous model updates needed"],
+    links: [ { label: "realitydefender.com", url: "https://www.realitydefender.com" } ] },
+  { id: "pindrop", name: "Pindrop", cat: "Verify", domain: "Verify", controls: ["10"], tag: "Voice authentication and deepfake/liveness detection",
+    autonomy: "Real-time detection", maturity: "Established · voice security",
+    detail: "Voice-security specialist for call centers and phone-based workflows: authenticates callers and detects synthetic-voice and liveness anomalies, defending payment authorization and account-change requests against voice-clone fraud — the exact vector control #10 addresses.",
+    fit: "Voice-channel fraud and deepfake defense for payments and resets (control #10).",
+    strengths: ["Purpose-built for voice-clone and liveness detection", "Proven in high-volume call-center environments", "Directly targets payment and account-change fraud"],
+    considerations: ["Voice-channel focus — pair with out-of-band callback", "Tune against your call-flow and fraud patterns"],
+    links: [ { label: "pindrop.com", url: "https://www.pindrop.com" } ] },
+  { id: "cycognito", name: "CyCognito", cat: "Validate", domain: "Validate", controls: ["12", "1"], tag: "External attack surface management and exposure testing",
+    autonomy: "High — continuous discovery", maturity: "Established · ASM leader",
+    detail: "Continuously discovers, maps, and tests internet-exposed assets from the attacker’s perspective, surfacing shadow and orphaned assets and prioritizing the exposures that are actually exploitable.",
+    fit: "External attack surface discovery feeding validation (controls #12, #1).",
+    strengths: ["Attacker’s-eye discovery of unknown and shadow assets", "Active testing prioritizes exploitable exposure", "Continuous, not point-in-time"],
+    considerations: ["External focus — pair with internal validation", "Attribution tuning for very large estates"],
+    links: [ { label: "cycognito.com", url: "https://www.cycognito.com" } ] },
+  { id: "xpanse", name: "Palo Alto Cortex Xpanse", cat: "Validate", domain: "Validate", controls: ["12"], tag: "Internet attack surface discovery and management",
+    autonomy: "High — continuous discovery", maturity: "Established",
+    detail: "Continuously discovers an organization’s internet-facing assets and exposures and feeds remediation and SOC workflows within the Palo Alto Cortex platform.",
+    fit: "Continuous external asset discovery (control #12).",
+    strengths: ["Broad internet-scale asset discovery", "Integrates with Cortex remediation workflows", "Reduces unknown exposure"],
+    considerations: ["Best realized within the Palo Alto ecosystem", "Discovery breadth vs. active exploit testing"],
+    links: [ { label: "paloaltonetworks.com · Xpanse", url: "https://www.paloaltonetworks.com/cortex/cortex-xpanse" } ] },
+  { id: "abnormal", name: "Abnormal Security", cat: "Email", domain: "Email", controls: ["11"], tag: "Behavioral AI email security against BEC and account takeover",
+    autonomy: "High — auto-remediation", maturity: "Scaling · AI email leader",
+    detail: "Uses behavioral AI to baseline normal communication and detect socially-engineered attacks — business email compromise, vendor fraud, and account takeover — that signature gateways miss, auto-remediating malicious mail after delivery.",
+    fit: "AI-driven BEC and advanced email-threat defense (control #11).",
+    strengths: ["Behavioral baselining catches text-only BEC with no payload", "Automatic post-delivery remediation", "API deployment alongside Microsoft and Google"],
+    considerations: ["Behavioral model needs a learning period", "Complements, not replaces, native mail security"],
+    links: [ { label: "abnormalsecurity.com", url: "https://abnormalsecurity.com" } ] },
+  { id: "proofpoint", name: "Proofpoint", cat: "Email", domain: "Email", controls: ["11", "13"], tag: "Email security, threat protection, and security awareness",
+    autonomy: "Policy + detection", maturity: "Established · market leader",
+    detail: "Long-standing leader in email security and threat protection with integrated security-awareness training — covering both the delivery channel (#11) and the human layer (#13).",
+    fit: "Enterprise email defense and awareness training (controls #11, #13).",
+    strengths: ["Deep email threat intelligence and controls", "Integrated awareness and phishing simulation", "Broad enterprise deployment"],
+    considerations: ["Suite breadth requires configuration", "Overlap with native mail security to rationalize"],
+    links: [ { label: "proofpoint.com", url: "https://www.proofpoint.com" } ] },
+  { id: "defendero365", name: "Microsoft Defender for O365", cat: "Email", domain: "Email", controls: ["11"], tag: "Native email and collaboration threat protection",
+    autonomy: "Policy + automation", maturity: "Established · ubiquitous",
+    detail: "Native protection for Exchange, Teams, and SharePoint: anti-phishing, safe links and attachments, and automated investigation and response inside the Microsoft 365 estate.",
+    fit: "Baseline email and collaboration security for Microsoft estates (control #11).",
+    strengths: ["Native to Microsoft 365 — no added mail routing", "Automated investigation and response", "Broad collaboration-app coverage"],
+    considerations: ["Strongest within Microsoft; advanced BEC often augmented", "Tuning needed to match specialist tools"],
+    links: [ { label: "microsoft.com · Defender for O365", url: "https://www.microsoft.com/security/business/siem-and-xdr/microsoft-defender-office-365" } ] },
+  { id: "knowbe4", name: "KnowBe4", cat: "Awareness", domain: "Awareness", controls: ["13"], tag: "Security awareness training and phishing simulation",
+    autonomy: "Program platform", maturity: "Established · category leader",
+    detail: "The largest security-awareness and simulated-phishing platform, now extending to deepfake- and vishing-aware training and reporting workflows that turn employees into an early-warning sensor.",
+    fit: "Human-layer resilience and deepfake-aware awareness (control #13).",
+    strengths: ["Largest training and simulation content library", "Deepfake and vishing modules", "Reporting and risk scoring by user and role"],
+    considerations: ["Outcome depends on culture, not just content", "Simulation fatigue if poorly programmed"],
+    links: [ { label: "knowbe4.com", url: "https://www.knowbe4.com" } ] },
+  { id: "feedzai", name: "Feedzai", cat: "Fraud", domain: "Fraud", controls: ["14"], tag: "AI transaction fraud and financial-crime prevention",
+    autonomy: "High — real-time scoring", maturity: "Established · bank-grade",
+    detail: "Enterprise financial-crime platform using machine learning to score transactions in real time for fraud, account takeover, and money laundering at bank scale.",
+    fit: "Real-time behavioral fraud and transaction monitoring (control #14).",
+    strengths: ["Real-time ML scoring at high transaction volume", "Coverage across fraud and AML", "Proven at large financial institutions"],
+    considerations: ["Model governance and explainability required", "Integration into payment rails is a program"],
+    links: [ { label: "feedzai.com", url: "https://www.feedzai.com" } ] },
+  { id: "featurespace", name: "Featurespace", cat: "Fraud", domain: "Fraud", controls: ["14"], tag: "Adaptive behavioral analytics for fraud and APP scams",
+    autonomy: "High — adaptive models", maturity: "Established · acquired by Visa",
+    detail: "Adaptive Behavioral Analytics and the ARIC platform detect anomalous activity and authorized-push-payment scams in real time; acquired by Visa in 2025.",
+    fit: "Behavioral detection of scams and account takeover (control #14).",
+    strengths: ["Adaptive models catch novel and APP-scam patterns", "Real-time intervention", "Strong fit for payments fraud"],
+    considerations: ["Behavioral tuning to reduce false positives", "Integrating under Visa post-acquisition"],
+    links: [ { label: "featurespace.com", url: "https://www.featurespace.com" } ] }
+];
+
+/* Vendor comparison scores: [Capability, Autonomy, Maturity, Enterprise scale] (1-5) */
+const SCORES = {
+  armadin: [5,5,2,3,4], xbow: [5,5,3,4,4], nodezero: [4,4,5,5,5], pentera: [4,3,5,5,5], picus: [4,4,4,4,4],
+  cycognito: [4,4,4,4,4], xpanse: [4,4,4,5,4],
+  mobb: [4,4,3,4,4], shannon: [4,5,2,2,3], strix: [4,5,2,2,3],
+  okta: [5,3,5,5,5], entra: [5,3,5,5,5], yubico: [4,2,5,4,5], cyberark: [5,4,5,5,5], sailpoint: [4,3,5,5,4], astrix: [4,4,3,3,4],
+  crowdstrike: [5,4,5,5,5], sentinel: [4,4,5,5,4], xsiam: [5,5,4,4,4], dropzone: [4,5,2,3,4],
+  netskope: [5,4,5,5,5], zscaler: [5,4,5,5,5], prompt: [4,4,3,3,4], protectai: [4,3,4,4,4], hiddenlayer: [4,3,3,3,4], lakera: [4,4,3,3,4],
+  illumio: [5,4,5,5,5], guardicore: [4,4,4,4,4],
+  realitydefender: [4,4,3,3,4], pindrop: [4,4,4,4,5],
+  abnormal: [5,5,4,4,5], proofpoint: [4,3,5,5,4], defendero365: [4,4,5,5,4],
+  knowbe4: [4,2,5,5,4],
+  feedzai: [5,4,5,5,5], featurespace: [4,4,4,4,5]
+};
+
+const EXTENDED = [
+  { n: "11", name: "Email & collaboration security", layer: "Delivery layer", why: "The dominant initial-access and fraud channel, and the help desk is a favored reset path; AI makes lures and BEC flawless, so gateway detection and verified-request handling carry more weight." },
+  { n: "12", name: "Attack surface management", layer: "Exposure-discovery layer", why: "You cannot defend assets you do not know you expose; continuous external discovery of shadow and orphaned assets feeds validation and remediation." },
+  { n: "13", name: "Human-layer resilience", layer: "Human layer", why: "Deepfake- and lure-aware training plus tested reporting turn employees from the softest target into an early-warning sensor." },
+  { n: "14", name: "Fraud analytics & transaction monitoring", layer: "Fraud layer", why: "Behavioral and transaction analytics catch AI-scaled fraud that slips past identity checks, complementing deepfake-resilient verification." },
+  { n: "15", name: "Immutable backup & cyber recovery", layer: "Recovery layer", why: "Tested, immutable backups are the last line against ransomware and destructive attacks — without them, a containment failure becomes catastrophic, unrecoverable loss." },
+  { n: "16", name: "Software supply-chain integrity", layer: "Build & supply layer", why: "SBOM, dependency scanning, and build-pipeline security stop compromised components and poisoned dependencies from entering production." },
+  { n: "17", name: "Data classification & crown-jewel mapping", layer: "Data-governance layer", why: "You cannot protect, segment, or prioritize what you have not classified — this underpins DLP, segmentation, and where validation is aimed." },
+  { n: "18", name: "Cloud security posture management (CNAPP)", layer: "Cloud-configuration layer", why: "Misconfiguration is a leading breach cause; continuous posture management closes exposed storage, identities, and services at cloud scale." },
+  { n: "19", name: "Logging, telemetry & detection engineering", layer: "Visibility layer", why: "Detection and response are only as good as the telemetry beneath them — coverage gaps are blind spots at machine speed." },
+  { n: "20", name: "Encryption & key management (crypto-agility)", layer: "Data-protection layer", why: "Strong encryption and governed keys limit the value of stolen data and prepare us for post-quantum migration." }
+];
+
+const MEDLOW_NOTE = "Below this line sit Medium and Low measures — physical and environmental security, routine GRC and policy-refresh cycles, patch cadence for low-risk internal assets, standard change-management hygiene, and cosmetic endpoint hardening. All are necessary practice, but they deliver lower marginal risk reduction against the frontier-AI threat, so they fall outside this briefing.";
+
+const PILLARS = [
+  { name: "Validate continuously", state: "We can answer “are we exploitable right now” with evidence, on demand.", evidence: "A live view of open, validated kill chains to crown-jewel systems — refreshed continuously, never a point-in-time report.", ctrls: ["1", "3"] },
+  { name: "Identity beyond recognition", state: "No credential, reset, or approval rests on recognizing a human.", evidence: "Phishing-resistant access is universal, every privileged action is just-in-time, and no standing admin remains.", ctrls: ["2", "4", "5", "10"] },
+  { name: "Contain by design", state: "A foothold stays a foothold — blast radius is capped in advance.", evidence: "Crown-jewel systems are segmented, and containment runs on pre-approved authority at machine speed.", ctrls: ["6", "8"] },
+  { name: "Data stays governed", state: "Data reaches AI only through sanctioned, monitored paths.", evidence: "Shadow-AI use is visible and rare; sensitive data cannot leave through prompts or model endpoints.", ctrls: ["7"] },
+  { name: "Our AI is defensible", state: "Every model and agent is inventoried, permissioned, and red-teamed.", evidence: "No agent holds unneeded production access, and AI systems are tested before and after release.", ctrls: ["9"] }
+];
+
+const AUDIENCES = [
+  { audience: "Board", cadence: "Quarterly board / risk committee", question: "Are we carrying undue frontier-AI risk?",
+    evidence: [
+      { a: "Risk-posture one-pager", d: "open critical exposures and the quarter-over-quarter trend against appetite" },
+      { a: "Control-investment status", d: "the priority controls funded, owned, and on track" },
+      { a: "Independent assurance", d: "internal-audit or external validation that appetite is not breached" }
+    ] },
+  { audience: "Regulators", cadence: "Exam-ready, refreshed continuously", question: "Is AI adoption controlled, auditable, and compliant?",
+    evidence: [
+      { a: "Control-to-framework mapping", d: "coverage against FFIEC, NIST AI RMF, and SR 11-7" },
+      { a: "Autonomous-action audit trail", d: "human oversight and full logs for every automated decision" },
+      { a: "Continuous evidence feed", d: "queryable posture replacing point-in-time attestations" }
+    ] },
+  { audience: "Executive Committee", cadence: "Monthly and quarterly", question: "Is the risk actively managed to appetite?",
+    evidence: [
+      { a: "Live exposure dashboard", d: "open, validated exposures to crown-jewel systems" },
+      { a: "Remediation metrics", d: "exploitable exposure closed in hours, evidenced continuously" },
+      { a: "End-state scorecard", d: "each statement backed by live evidence, not attestation" }
+    ] },
+  { audience: "Institutional Clients", cadence: "Annual pack, plus on request", question: "Can we trust you with our business?",
+    evidence: [
+      { a: "Due-diligence pack", d: "continuous-validation summary with SOC 2 / ISO mapping" },
+      { a: "Control attestations", d: "phishing-resistant access and verified payment workflows" },
+      { a: "Notification commitments", d: "contractual timelines with named contacts" }
+    ] }
+];
+
+const VENDORS = [
+  { scope: "Critical only", ask: "How do you validate exploitability, and how often?", good: "Continuous or high-frequency autonomous testing with exploit-validated findings", hold: "Evidence in diligence; remediation SLAs in contract; periodic joint testing", flag: "An annual pentest PDF" },
+  { scope: "Critical & material", ask: "What is your SLA for exploitable, internet-facing vulnerabilities?", good: "Hours to days, prioritized by exploitability rather than CVSS bands", hold: "Contractual SLA with right to evidence", flag: "30/60/90-day severity bands" },
+  { scope: "All tiers", ask: "Is workforce access phishing-resistant? How are helpdesk resets verified?", good: "FIDO2 coverage; verified identity on every reset; just-in-time privileged access", hold: "Annual attestation mapped to SOC 2 / ISO", flag: "OTP or push only; voice-based resets" },
+  { scope: "All tiers", ask: "Where do AI systems or agents touch our data, and under what controls?", good: "AI inventory, sanctioned gateway, no training on our data, permissioned agents", hold: "AI-use clauses; notice of material change", flag: "“We don’t use AI” — with nothing to prove it" },
+  { scope: "Critical & material", ask: "Can you prove the provenance and integrity of AI models used on our data?", good: "Model inventory, scanning, and supply-chain controls (AI-BOM)", hold: "Evidence of model governance; notice of model change", flag: "Unknown or unmanaged model supply chain" },
+  { scope: "All tiers", ask: "How do you verify payment or change requests that appear to come from us?", good: "Out-of-band callback to known channels; dual control on high-value actions", hold: "Documented, tested procedure", flag: "Voice or email verification" },
+  { scope: "Critical only", ask: "Do your own subcontractors (fourth parties) meet the same bar?", good: "Security and AI requirements flow down; visibility into critical fourth parties", hold: "Contractual flow-down; disclosure of critical subcontractors", flag: "No visibility past their own perimeter" },
+  { scope: "All tiers", ask: "How quickly do we hear about an incident affecting our data?", good: "Hours-based contractual notification with real detail; joint exercises for critical vendors", hold: "Notification SLA; tabletop cadence scaled by tier", flag: "“As required by law” — and nothing more" }
+];
+
+const TP_THEMES = [
+  { name: "Prove exposure continuously", body: "Exploit-validated testing of their environment on a continuous or high-frequency basis — not an annual pentest PDF.", refs: "Controls 1 · 3" },
+  { name: "Phishing-resistant identity", body: "FIDO2-grade workforce access, verified helpdesk resets, and just-in-time privilege — no standing admin.", refs: "Controls 2 · 4 · 5" },
+  { name: "Govern AI and our data", body: "A known AI inventory, a sanctioned path for our data, no training on it, and permissioned agents.", refs: "Controls 7 · 9" },
+  { name: "Contain and notify fast", body: "Segmentation that caps blast radius, and hours-based incident notification with real detail.", refs: "Controls 6 · 8" },
+  { name: "Verify high-value requests", body: "Out-of-band callback and dual control on payments and change requests — not voice or email trust.", refs: "Control 10" }
+];
+
+const TP_TIERS = [
+  { tier: "Tier 1 — Critical", accent: "var(--risk-critical)", scope: "Hosts, processes, or directly accesses regulated customer data at scale", expect: "Full expectations, evidence in diligence, contractual SLAs, annual joint testing, and right to audit." },
+  { tier: "Tier 2 — Material", accent: "var(--risk-high)", scope: "Limited or indirect access to sensitive data or connected systems", expect: "Attestations mapped to SOC 2 / ISO, AI-use disclosure, and a defined notification SLA." },
+  { tier: "Tier 3 — Limited", accent: "var(--pnc-blue)", scope: "No sensitive-data access; low operational dependency", expect: "Baseline security attestation and an AI-use questionnaire at onboarding." }
+];
+
+const TP_LIFECYCLE = [
+  { n: "1", step: "Diligence", body: "Evidence-based assessment before onboarding — exploit-validated testing, identity posture, and AI-use inventory, not a self-scored questionnaire alone." },
+  { n: "2", step: "Contract", body: "Remediation SLAs, phishing-resistant access, AI-use and no-training clauses, hours-based breach notification, and right to audit." },
+  { n: "3", step: "Monitor", body: "Continuous external attack-surface monitoring, attestation refresh, and re-test evidence — not a one-time check at signing." },
+  { n: "4", step: "Incident & exit", body: "A tested notification path, a joint tabletop cadence, and clean data return or deletion when the relationship ends." }
+];
+
+const RECIPROCAL = [
+  { theme: "Prove exposure continuously", require: "Continuous, exploit-validated testing — not an annual PDF", demonstrate: "Our continuous-validation summary and current exploitable-exposure posture, shareable under NDA" },
+  { theme: "Phishing-resistant identity", require: "FIDO2, verified resets, and just-in-time privilege", demonstrate: "Attestation of FIDO2 workforce coverage, verified-reset process, and zero standing privilege" },
+  { theme: "Govern AI and our data", require: "AI inventory, sanctioned gateway, no training on client data", demonstrate: "Our AI-use inventory, data-handling and no-train commitments, and agent-permissioning evidence" },
+  { theme: "Contain and notify fast", require: "Segmentation and hours-based breach notification", demonstrate: "Our segmentation posture and a contractual, hours-based notification commitment with named contacts" },
+  { theme: "Verify high-value requests", require: "Out-of-band callback and dual control", demonstrate: "Our documented callback and dual-control procedures for payments and changes" }
+];
+
+const DOMAINS = [
+  { key: "All", label: "All vendors" },
+  { key: "Validate", label: "Exposure validation" },
+  { key: "Remediate", label: "Autonomous remediation" },
+  { key: "Identity", label: "Identity & access" },
+  { key: "Detect", label: "Detection & response" },
+  { key: "Data & AI", label: "Data & AI security" },
+  { key: "Segment", label: "Network segmentation" },
+  { key: "Verify", label: "Deepfake defense" },
+  { key: "Email", label: "Email & BEC" },
+  { key: "Awareness", label: "Security awareness" },
+  { key: "Fraud", label: "Fraud analytics" }
+];
+
+/* number -> control name (covers the top 10 and the extended 11-20). */
+const NAME_BY_NUM = {};
+CONTROLS.forEach(c => { NAME_BY_NUM[c.rank] = c.name; });
+EXTENDED.forEach(e => { NAME_BY_NUM[Number(e.n)] = e.name; });
+
+/* ========================================================================== *
+ *  ===== STATE =====                                                         *
+ * ========================================================================== */
+
+const state = { view: "overview", selected: 1, filter: "All", open: { armadin: true }, query: "", menuOpen: false, searchOpen: false };
+
+function setState(patch) {
+  Object.assign(state, patch);
+  writeHash();
+  render();
+}
+
+/* ========================================================================== *
+ *  ===== LOOKUP MAPS =====                                                   *
+ * ========================================================================== */
+
+const valueBg = { Critical: "var(--risk-critical)", High: "var(--risk-high)" };
+
+const domainMap = {
+  Validate: ["var(--pnc-blue)", "var(--pnc-blue-050)", "var(--info-line)"],
+  Remediate: ["var(--pnc-orange-700)", "var(--pnc-orange-050)", "var(--pnc-orange-100)"],
+  Identity: ["var(--pnc-navy)", "var(--gray-100)", "var(--line-2)"],
+  Detect: ["var(--info)", "var(--info-bg)", "var(--info-line)"],
+  "Data & AI": ["var(--success)", "var(--success-bg)", "var(--success-line)"],
+  Segment: ["var(--warning)", "var(--warning-bg)", "var(--warning-line)"],
+  Verify: ["var(--risk-high)", "var(--risk-high-bg)", "var(--line-1)"],
+  Email: ["var(--pnc-navy)", "var(--gray-100)", "var(--line-2)"],
+  Awareness: ["var(--pnc-orange-700)", "var(--pnc-orange-050)", "var(--pnc-orange-100)"],
+  Fraud: ["var(--risk-high)", "var(--risk-high-bg)", "var(--line-1)"]
+};
+
+const scopeMap = {
+  "All tiers": ["var(--pnc-blue)", "var(--pnc-blue-050)", "var(--info-line)"],
+  "Critical & material": ["var(--warning)", "var(--warning-bg)", "var(--warning-line)"],
+  "Critical only": ["var(--risk-critical)", "var(--risk-critical-bg)", "var(--line-1)"]
+};
+
+const compareDims = ["Capability", "Autonomy", "Maturity", "Enterprise scale"];
+
+function compareShade(s) {
+  return ([null,
+    { bg: "var(--gray-100)", fg: "var(--fg-3)" },
+    { bg: "var(--pnc-blue-050)", fg: "var(--fg-2)" },
+    { bg: "var(--pnc-blue-100)", fg: "var(--pnc-navy)" },
+    { bg: "var(--pnc-blue)", fg: "#fff" },
+    { bg: "var(--pnc-navy)", fg: "#fff" }
+  ][s]) || { bg: "var(--gray-100)", fg: "var(--fg-3)" };
+}
+
+const VIEW_TITLES = {
+  overview: "Overview & methodology",
+  controls: "Frontier AI — top 10 controls",
+  tools: "Leading vendors — mapped to the ranked controls",
+  compare: "Vendor comparison — peers within each control category",
+  endstate: "What we expect from third parties",
+  progress: "The desired end state"
+};
+
+/* ========================================================================== *
+ *  ===== ICONS =====                                                         *
+ * ========================================================================== */
+
+const ICON = {
+  info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>',
+  shield: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>',
+  grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>',
+  bars: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
+  users: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+  checkboard: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>',
+  arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>',
+  extlink: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>',
+  check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px;"><path d="M20 6 9 17l-5-5"></path></svg>',
+  chevron: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>',
+  menu: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>',
+  close: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>'
+};
+
+/* ========================================================================== *
+ *  ===== RENDER =====                                                        *
+ * ========================================================================== */
+
+function render() {
+  document.getElementById("root").innerHTML = shell();
+  wireHeader();
+  window.scrollTo(0, 0);
+}
+
+/* A clickable, hover-labelled control-number chip used throughout the app.
+   Clicking jumps to that control (top-10 land on its detail; 11-20 land on
+   the Control Rankings view where the extended list lives). */
+function controlChip(n, opts) {
+  opts = opts || {};
+  const name = NAME_BY_NUM[n] || ("Control " + n);
+  const size = opts.size || 24;
+  const bg = opts.bg || "var(--gray-100)";
+  const color = opts.color || "var(--pnc-navy)";
+  const border = opts.border || "var(--line-1)";
+  const font = opts.font || "12.5px";
+  return `<span data-control="${n}" title="Control ${n} — ${name}" style="cursor:pointer; width:${size}px; height:${size}px; display:grid; place-items:center; font-family:var(--font-mono); font-size:${font}; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; border-radius:var(--radius-sm); transition:transform 120ms ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">${n}</span>`;
+}
+
+function navItem(view, iconKey, label) {
+  const on = state.view === view;
+  const s = on
+    ? { color: "#fff", bg: "rgba(245,128,37,0.16)", shadow: "inset 3px 0 0 var(--pnc-orange)", icon: "var(--pnc-orange)" }
+    : { color: "rgba(255,255,255,0.72)", bg: "transparent", shadow: "none", icon: "rgba(255,255,255,0.6)" };
+  return `<a data-nav="${view}" style="display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); cursor:pointer; margin-bottom:2px; font-size:14px; font-weight:600; color:${s.color}; background:${s.bg}; box-shadow:${s.shadow};">
+    <span style="flex:none; color:${s.icon}; display:inline-flex;">${ICON[iconKey]}</span>
+    <span>${label}</span>
+  </a>`;
+}
+
+function shell() {
+  return `
+  <div data-r="shell" style="display:flex; height:100vh; width:100vw; overflow:hidden; font-family:var(--font-sans); color:var(--fg-1); background:var(--bg-2);">
+
+    <!-- ============ MOBILE BAR / MENU / SEARCH (<=900px) ============ -->
+    <div class="m-only">
+      <div class="m-bar">
+        <button class="m-iconbtn" data-menu-toggle aria-label="${state.menuOpen ? "Close menu" : "Open menu"}">${state.menuOpen ? ICON.close : ICON.menu}</button>
+        <span style="display:inline-flex; align-items:center; gap:9px; flex:1; min-width:0;">
+          <span style="width:26px; height:26px; border-radius:50%; background:var(--pnc-orange); display:grid; place-items:center; flex:none;"><span style="width:10px; height:10px; border-radius:50%; border:2.5px solid #fff;"></span></span>
+          <span style="font-family:var(--font-serif); font-weight:700; font-size:16px; letter-spacing:0.02em; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Technology Risk</span>
+        </span>
+        <button class="m-iconbtn" data-search-toggle aria-label="Search" style="${state.searchOpen ? "background:var(--pnc-orange);" : ""}">${ICON.search}</button>
+      </div>
+      <div class="m-search" style="display:${state.searchOpen ? "block" : "none"}; background:var(--pnc-navy); padding:0 14px 14px;">
+        <div style="position:relative;">
+          <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--fg-3); pointer-events:none;">${ICON.search}</span>
+          <input id="search-input-m" autocomplete="off" placeholder="Search controls, vendors&hellip;" style="font-family:var(--font-sans); font-size:15px; padding:11px 14px 11px 40px; width:100%; border:1px solid var(--line-2); border-radius:var(--radius-md); background:#fff;">
+          <div id="search-dropdown-m" style="display:none; margin-top:8px; max-height:50vh; overflow-y:auto; background:#fff; border:1px solid var(--line-2); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);"></div>
+        </div>
+      </div>
+      <nav class="m-drawer" style="display:${state.menuOpen ? "block" : "none"}; background:var(--pnc-navy); border-top:1px solid rgba(255,255,255,0.1); max-height:70vh; overflow-y:auto;">
+        ${navItem("overview", "info", "Overview &amp; Methodology")}
+        ${navItem("controls", "shield", "Control Rankings")}
+        ${navItem("tools", "grid", "Leading Vendors")}
+        ${navItem("compare", "bars", "Vendor Comparison")}
+        ${navItem("endstate", "users", "Third-Party Expectations")}
+        ${navItem("progress", "checkboard", "End State")}
+      </nav>
+    </div>
+
+    <aside data-r="side" style="width:248px; background:var(--pnc-navy); color:#fff; flex:none; display:flex; flex-direction:column; height:100%;">
+      <div style="padding:20px 18px; border-bottom:1px solid rgba(255,255,255,0.1);">
+        <span style="display:inline-flex; align-items:center; gap:9px;">
+          <span style="width:30px; height:30px; border-radius:50%; background:var(--pnc-orange); display:grid; place-items:center; flex:none;">
+            <span style="width:12px; height:12px; border-radius:50%; border:2.5px solid #fff;"></span>
+          </span>
+          <span style="display:grid; line-height:1.05;">
+            <span style="font-family:var(--font-serif); font-weight:700; font-size:17px; letter-spacing:0.02em; color:#fff;">Technology Risk</span>
+            <span style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.55);">Frontier AI briefing</span>
+          </span>
+        </span>
+      </div>
+      <nav data-r="nav" style="padding:14px 12px; flex:1; overflow-y:auto;">
+        <div data-r="navlabel" style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.4); padding:0 10px 8px;">Frontier AI Briefing</div>
+        ${navItem("overview", "info", "Overview &amp; Methodology")}
+        ${navItem("controls", "shield", "Control Rankings")}
+        ${navItem("tools", "grid", "Leading Vendors")}
+        ${navItem("compare", "bars", "Vendor Comparison")}
+        ${navItem("endstate", "users", "Third-Party Expectations")}
+        ${navItem("progress", "checkboard", "End State")}
+      </nav>
+    </aside>
+
+    <div data-r="main" style="flex:1; min-width:0; display:flex; flex-direction:column; height:100%;">
+      <header style="height:64px; border-bottom:1px solid var(--line-1); background:#fff; display:flex; align-items:center; padding:0 28px; gap:20px; flex:none;">
+        <div style="flex:1;">
+          <div style="font-size:12px; color:var(--fg-3);">Technology Risk &middot; Frontier AI risk</div>
+          <div style="font-size:20px; font-weight:700; color:var(--fg-1); letter-spacing:-0.01em;">${VIEW_TITLES[state.view]}</div>
+        </div>
+        <div id="search-wrap" data-r="search" style="position:relative; display:flex; align-items:center;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:11px; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input id="search-input" autocomplete="off" placeholder="Search controls, vendors&hellip;" style="font-family:var(--font-sans); font-size:14px; padding:9px 12px 9px 34px; width:260px; border:1px solid var(--line-2); border-radius:var(--radius-pill); background:var(--bg-2);">
+          <div id="search-dropdown" style="display:none; position:absolute; top:46px; right:0; width:360px; max-height:60vh; overflow-y:auto; background:#fff; border:1px solid var(--line-2); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:50;"></div>
+        </div>
+      </header>
+
+      <div data-r="scroll" style="flex:1; overflow-y:auto;">
+        ${views()}
+      </div>
+    </div>
+  </div>`;
+}
+
+function views() {
+  switch (state.view) {
+    case "overview": return viewOverview();
+    case "controls": return viewControls();
+    case "tools": return viewTools();
+    case "compare": return viewCompare();
+    case "endstate": return viewEndState();
+    case "progress": return viewProgress();
+    default: return viewOverview();
+  }
+}
+
+/* ---- OVERVIEW ---- */
+function overviewCard(goto, iconSpan, title, body) {
+  return `<a data-goto="${goto}" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:22px 24px; cursor:pointer; display:block;">
+    <div style="display:flex; align-items:center; gap:10px;">${iconSpan}
+      <div style="font-size:15px; font-weight:700; color:var(--fg-1);">${title}</div>
+    </div>
+    <div style="font-size:13.5px; color:var(--fg-2); line-height:1.55; margin-top:10px;">${body}</div>
+  </a>`;
+}
+
+function methodItem(n, title, body) {
+  return `<div>
+    <div style="display:flex; align-items:center; gap:9px;"><span style="font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--pnc-orange);">${n}</span><div style="font-size:14px; font-weight:700; color:var(--fg-1);">${title}</div></div>
+    <div style="font-size:13.5px; color:var(--fg-2); line-height:1.55; margin-top:7px;">${body}</div>
+  </div>`;
+}
+
+function chipNums(nums) {
+  return nums.map(n => controlChip(n)).join("");
+}
+
+function viewOverview() {
+  return `<div style="padding:28px; display:grid; gap:20px; max-width:1360px;">
+
+    <div style="background:var(--pnc-navy); color:#fff; border-radius:var(--radius-md); padding:36px 40px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--pnc-orange);">Frontier AI risk &middot; Technology Risk briefing</div>
+      <div style="font-family:var(--font-serif); font-size:34px; font-weight:700; line-height:1.2; letter-spacing:-0.01em; margin-top:12px; max-width:940px;">Controls that Reduce Frontier AI Risk</div>
+      <div style="font-size:15px; line-height:1.6; color:rgba(255,255,255,0.82); margin-top:14px; max-width:940px;">Frontier AI mostly sharpens familiar attacks &mdash; faster, at scale, more believable &mdash; while turning our own AI into a new surface to defend. Most of these controls a mature bank already runs; the shift is in their speed and shape. Ranked here by risk-reduction value.</div>
+    </div>
+
+    <div>
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">How frontier AI changes the risk</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Every ranked control answers one of two shifts</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px;">
+        <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); border-top:3px solid var(--risk-high); padding:22px 24px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--risk-high-bg); color:var(--risk-high); display:grid; place-items:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path></svg></span>
+            <div style="font-size:15px; font-weight:700; color:var(--fg-1);">A sharper attacker</div>
+          </div>
+          <div style="font-size:13.5px; color:var(--fg-2); line-height:1.55; margin-top:10px;">Speed, scale, and believable impersonation compress every attack. The answer is existing controls moved to machine speed and phishing-resistance &mdash; not new tooling.</div>
+          <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-1);">
+            <span style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); margin-right:3px;">Controls</span>
+            ${chipNums([1,2,3,4,6,8,10])}
+          </div>
+        </div>
+        <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); border-top:3px solid var(--pnc-blue); padding:22px 24px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--pnc-blue-050); color:var(--pnc-blue); display:grid; place-items:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 9h6v6H9z"></path><path d="M9 1v3"></path><path d="M15 1v3"></path><path d="M9 20v3"></path><path d="M15 20v3"></path><path d="M20 9h3"></path><path d="M20 14h3"></path><path d="M1 9h3"></path><path d="M1 14h3"></path></svg></span>
+            <div style="font-size:15px; font-weight:700; color:var(--fg-1);">A new attack surface</div>
+          </div>
+          <div style="font-size:13.5px; color:var(--fg-2); line-height:1.55; margin-top:10px;">Our own models, agents, and their credentials &mdash; and data leaving through prompts &mdash; are new assets and attack paths. These controls are genuinely new.</div>
+          <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-1);">
+            <span style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); margin-right:3px;">Controls</span>
+            ${chipNums([5,7,9])}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">What this dashboard covers</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Five connected views built on one underlying model of the risk</div>
+      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:14px;">
+        ${overviewCard("controls", '<span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--pnc-orange-050); color:var(--pnc-orange-700); display:grid; place-items:center; flex:none;">'+ICON.shield+'</span>', "Control rankings", "The ten controls ranked by risk-reduction value, each with why it ranks there, the shift it must make for the AI threat, what to measure, and the vendors that support it.")}
+        ${overviewCard("tools", '<span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--pnc-blue-050); color:var(--pnc-blue); display:grid; place-items:center; flex:none;">'+ICON.grid+'</span>', "Leading vendors", "Representative market leaders across all ten control domains &mdash; from exposure validation and remediation to identity, detection, data &amp; AI, and fraud &mdash; each with strengths, considerations, and references.")}
+        ${overviewCard("compare", '<span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--pnc-blue-050); color:var(--pnc-blue); display:grid; place-items:center; flex:none;">'+ICON.bars+'</span>', "Vendor comparison", "How the leaders within each category compare on capability, autonomy, maturity, and enterprise scale &mdash; a relative read to frame a shortlist.")}
+        ${overviewCard("endstate", '<span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--gray-100); color:var(--pnc-navy); display:grid; place-items:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span>', "Third-party expectations", "What we should expect from third parties &mdash; five expectations drawn from our own controls, how they scale by tier, the survey questions with good answers and red flags, and how we enforce them across the relationship.")}
+        ${overviewCard("progress", '<span style="width:32px; height:32px; border-radius:var(--radius-sm); background:var(--pnc-orange-050); color:var(--pnc-orange-700); display:grid; place-items:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></span>', "End state", "The desired end state in five statements &mdash; what &ldquo;done&rdquo; means and how we&rsquo;d know it&rsquo;s true &mdash; and how it is evidenced for the board, regulators, the executive committee, and institutional clients.")}
+      </div>
+    </div>
+
+    <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:26px 30px;">
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">Methodology</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">How the ranking, value tiers, sequencing, and vendor lists were built</div>
+      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:26px 40px; margin-top:20px;">
+        ${methodItem("01", "How controls were ranked", "Each control is scored on residual-risk reduction against the frontier-AI threat &mdash; both AI-accelerated attacks and the new risks of our own AI adoption &mdash; i.e. how much exposure it removes once other controls are in place, weighted for feasibility (cost, time, and effort to reach target state). The two combine into the ordered list; ties break toward controls that enable others.")}
+        ${methodItem("02", "Value tiers", '<b style="color:var(--risk-critical);">Critical</b> controls break the most common AI attack chains at the front door &mdash; validation, identity, remediation speed, and privilege. <b style="color:var(--risk-high);">High</b> controls contain, govern, or close newer gaps. Tiers express contribution to risk reduction, not urgency alone.')}
+        ${methodItem("03", "Current state &amp; required shift", "Baselines assume a mature large-bank security program. Most controls already exist &mdash; the frontier AI threat changes their required speed and shape, not their names. Each control names the specific shift from today&rsquo;s practice to what the AI threat demands.")}
+        ${methodItem("04", "Vendor selection", "Vendors are representative leaders per control domain, chosen on capability fit, independent evidence (benchmarks, analyst standing, deployment scale), and relevance to a regulated bank. The list is illustrative, not an approved shortlist, and not exhaustive.")}
+        ${methodItem("05", "Vendor comparison scoring", "Within each category, vendors are scored on a relative 1&ndash;5 scale across capability, autonomy, maturity, and enterprise scale. Scores are a qualitative read of public positioning to frame a shortlist &mdash; not a formal evaluation or proof-of-value result.")}
+        ${methodItem("06", "Sources &amp; limitations", "Vendor capabilities are as reported by the companies and public sources (see each card&rsquo;s references) and are not independently verified here. This is a decision aid, not a control assessment or a procurement recommendation; any adoption is subject to diligence and model-risk review.")}
+      </div>
+      <div style="margin-top:22px; border-top:1px solid var(--line-1); padding-top:16px; display:flex; align-items:flex-start; gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+        <div style="font-size:13px; color:var(--fg-3); line-height:1.55;">Built entirely from publicly available information &mdash; vendor websites, public benchmarks, press coverage, and analyst commentary (see each vendor card&rsquo;s references). It contains no PNC-internal or non-public data. Rankings and vendor lists reflect a point-in-time view of a fast-moving market and should be refreshed as the threat and tooling evolve.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- CONTROLS ---- */
+function viewControls() {
+  const sel = CONTROLS.find(c => c.rank === state.selected) || CONTROLS[0];
+
+  const kpis = `<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:20px;">
+    ${kpiCard("Controls ranked", "10", "var(--pnc-navy)", "the top tier, in full detail below")}
+    ${kpiCard("Critical value", "4", "var(--risk-critical)", "validation, identity, remediation speed, privilege")}
+    ${kpiCard("Further High-value", "+10", "var(--pnc-navy)", "controls 11&ndash;20, rounding out the High tier")}
+    ${kpiCard("Leading vendors mapped", String(TOOLS.length), "var(--pnc-blue)", "across the full control set")}
+  </div>`;
+
+  const rankedList = CONTROLS.map(c => {
+    const bg = state.selected === c.rank ? "var(--pnc-blue-050)" : "#fff";
+    return `<div data-pick="${c.rank}" style="display:grid; grid-template-columns:40px 1fr auto; gap:12px; align-items:center; padding:11px 20px; border-top:1px solid var(--line-1); cursor:pointer; background:${bg};">
+      <span style="font-family:var(--font-mono); font-size:17px; font-weight:600; color:var(--pnc-orange);">${c.rank}</span>
+      <div style="min-width:0;">
+        <div style="font-size:14px; font-weight:600; color:var(--fg-1); line-height:1.3;">${c.name}</div>
+        <div style="font-size:12px; color:var(--fg-3); margin-top:1px;">${c.tag}</div>
+      </div>
+      <div style="display:grid; gap:4px; justify-items:end;">
+        <span style="font-size:11px; font-weight:700; color:#fff; background:${valueBg[c.value]}; padding:2px 9px; border-radius:var(--radius-pill); white-space:nowrap;">${c.value}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  const shiftRows = sel.shift.map(s => `<div style="display:grid; grid-template-columns:1fr 28px 1fr; gap:10px; align-items:center;">
+    <div style="background:var(--bg-2); border:1px solid var(--line-1); border-radius:var(--radius-sm); padding:10px 14px; font-size:13.5px; color:var(--fg-2); line-height:1.4;">${s.f}</div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-orange)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="justify-self:center;"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+    <div style="background:var(--pnc-orange-050); border:1px solid var(--pnc-orange-100); border-radius:var(--radius-sm); padding:10px 14px; font-size:13.5px; color:var(--fg-1); font-weight:600; line-height:1.4;">${s.t}</div>
+  </div>`).join("");
+
+  const measures = sel.measure.map(m => `<div style="display:flex; gap:9px; align-items:flex-start;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px;"><path d="M20 6 9 17l-5-5"></path></svg>
+    <span style="font-size:13.5px; color:var(--fg-2); line-height:1.45;">${m}</span>
+  </div>`).join("");
+
+  const toolTags = sel.tools.map(t => `<span style="font-size:12.5px; font-weight:600; color:var(--fg-1); background:var(--bg-2); border:1px solid var(--line-2); padding:4px 12px; border-radius:var(--radius-pill);">${t}</span>`).join("");
+
+  const detail = `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:24px 28px;">
+    <div style="display:flex; align-items:flex-start; gap:18px;">
+      <span style="font-family:var(--font-mono); font-size:44px; font-weight:600; color:var(--pnc-orange); line-height:1;">${sel.rank}</span>
+      <div style="flex:1;">
+        <div style="font-size:21px; font-weight:700; color:var(--fg-1); letter-spacing:-0.01em; line-height:1.25;">${sel.name}</div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <span style="font-size:11.5px; font-weight:700; color:#fff; background:${valueBg[sel.value]}; padding:2px 9px; border-radius:var(--radius-pill);">${sel.value} value</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:22px;">
+      <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">Why it ranks here</div>
+      <div style="font-size:14.5px; color:var(--fg-2); line-height:1.6; margin-top:8px; max-width:760px;">${sel.why}</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;">
+      <div style="background:var(--pnc-blue-050); border:1px solid var(--line-1); border-left:3px solid var(--pnc-blue); border-radius:var(--radius-sm); padding:14px 16px;">
+        <div style="display:flex; align-items:center; gap:7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-blue)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg>
+          <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--pnc-blue);">Where it fits in layered defense</div>
+        </div>
+        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.5; margin-top:8px;">${sel.layer}</div>
+      </div>
+      <div style="background:var(--risk-high-bg); border:1px solid var(--line-1); border-left:3px solid var(--risk-high); border-radius:var(--radius-sm); padding:14px 16px;">
+        <div style="display:flex; align-items:center; gap:7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--risk-high)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+          <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--risk-high);">If it&rsquo;s missing or it fails</div>
+        </div>
+        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.5; margin-top:8px;">${sel.ifFails}</div>
+      </div>
+    </div>
+    <div style="margin-top:22px;">
+      <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">The required shift</div>
+      <div style="display:grid; gap:10px; margin-top:10px;">${shiftRows}</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:22px;">
+      <div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">What to measure</div>
+        <div style="display:grid; gap:8px; margin-top:10px;">${measures}</div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">Automation leverage</div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">${toolTags}</div>
+        <a data-goto="tools" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--pnc-blue); cursor:pointer; margin-top:14px;">
+          <span>Compare leading vendors</span>${ICON.arrow}
+        </a>
+      </div>
+    </div>
+  </div>`;
+
+  const extended = EXTENDED.map(e => `<div style="display:grid; grid-template-columns:42px 1fr; gap:14px; padding:15px 22px; border-top:1px solid var(--line-1);">
+    <span style="font-family:var(--font-mono); font-size:18px; font-weight:600; color:var(--pnc-orange); line-height:1.2;">${e.n}</span>
+    <div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:14.5px; font-weight:700; color:var(--fg-1);">${e.name}</span>
+        <span style="font-size:10.5px; font-weight:700; color:#fff; background:var(--risk-high); padding:1px 9px; border-radius:var(--radius-pill);">High</span>
+      </div>
+      <div style="font-size:12.5px; color:var(--fg-2); line-height:1.5; margin-top:5px;">${e.why}</div>
+      <div style="font-size:11.5px; font-weight:600; color:var(--pnc-blue); margin-top:7px;">${e.layer}</div>
+    </div>
+  </div>`).join("");
+
+  return `<div style="padding:28px; display:grid; gap:20px;">
+    ${kpis}
+    <div style="display:grid; grid-template-columns:minmax(380px,430px) 1fr; gap:20px; align-items:start;">
+      <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+        <div style="padding:16px 20px 12px;">
+          <div style="font-size:15px; font-weight:700; color:var(--fg-1);">Ranked controls</div>
+          <div style="font-size:12px; color:var(--fg-3); margin-top:2px;">Select a control to see justification and required shift</div>
+        </div>
+        ${rankedList}
+      </div>
+      ${detail}
+    </div>
+    <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="padding:18px 22px 6px;">
+        <div style="font-size:15px; font-weight:700; color:var(--fg-1);">Beyond the top ten &mdash; the next High-value controls</div>
+        <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">If we widen the program beyond the ten, these round out the High tier &mdash; strong risk reduction, just below the top ten. We stop before Medium/Low.</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2,1fr);">${extended}</div>
+      <div style="border-top:1px solid var(--line-1); background:var(--gray-025); padding:14px 22px; display:flex; gap:10px; align-items:flex-start;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>
+        <div style="font-size:12.5px; color:var(--fg-3); line-height:1.5;"><b style="color:var(--fg-2);">Where we stop.</b> ${MEDLOW_NOTE}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function kpiCard(label, value, valueColor, sub) {
+  return `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:20px;">
+    <div style="font-size:13px; color:var(--fg-3); font-weight:600;">${label}</div>
+    <div style="font-family:var(--font-mono); font-size:32px; font-weight:600; color:${valueColor}; letter-spacing:-0.01em; margin-top:10px;">${value}</div>
+    <div style="font-size:12px; color:var(--fg-3); margin-top:6px;">${sub}</div>
+  </div>`;
+}
+
+/* ---- TOOLS ---- */
+function viewTools() {
+  const chips = DOMAINS.map(d => {
+    const on = state.filter === d.key;
+    const c = on ? "#fff" : "var(--fg-2)";
+    const bg = on ? "var(--pnc-navy)" : "#fff";
+    const line = on ? "var(--pnc-navy)" : "var(--line-2)";
+    return `<a data-filter="${d.key}" style="font-size:13px; font-weight:600; padding:7px 15px; border-radius:var(--radius-pill); cursor:pointer; color:${c}; background:${bg}; border:1px solid ${line};">${d.label}</a>`;
+  }).join("");
+
+  const cards = TOOLS.filter(t => state.filter === "All" || t.domain === state.filter).map(t => {
+    const [cc, cbg, cln] = domainMap[t.domain] || domainMap.Validate;
+    const open = !!state.open[t.id];
+    const controlChips = t.controls.map(cn => `<span data-control="${cn}" title="Control ${cn} — ${NAME_BY_NUM[Number(cn)] || ("Control " + cn)}" style="cursor:pointer; font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--pnc-orange); background:var(--pnc-orange-050); border:1px solid var(--pnc-orange-100); border-radius:var(--radius-xs); padding:1px 7px;">${cn}</span>`).join("");
+
+    const body = open ? `<div style="border-top:1px solid var(--line-1); padding:20px 22px; display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:28px; background:var(--gray-025);">
+      <div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">What it does</div>
+        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.55; margin-top:8px;">${t.detail}</div>
+        <div style="font-size:13px; color:var(--fg-1); font-weight:600; margin-top:12px;">Best fit: <span style="font-weight:400; color:var(--fg-2);">${t.fit}</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">Strengths</div>
+        <div style="display:grid; gap:7px; margin-top:8px;">
+          ${t.strengths.map(s => `<div style="display:flex; gap:8px; align-items:flex-start;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px;"><path d="M20 6 9 17l-5-5"></path></svg>
+            <span style="font-size:13px; color:var(--fg-2); line-height:1.45;">${s}</span></div>`).join("")}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3);">Considerations</div>
+        <div style="display:grid; gap:7px; margin-top:8px;">
+          ${t.considerations.map(s => `<div style="display:flex; gap:8px; align-items:flex-start;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+            <span style="font-size:13px; color:var(--fg-2); line-height:1.45;">${s}</span></div>`).join("")}
+        </div>
+      </div>
+      <div style="grid-column:1 / -1; border-top:1px solid var(--line-1); padding-top:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3); margin-right:2px;">References</span>
+        ${t.links.map(ln => `<a href="${ln.url}" target="_blank" rel="noopener" style="font-size:12.5px; font-weight:600; color:var(--pnc-blue); text-decoration:none; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line-2); border-radius:var(--radius-pill); padding:3px 11px;">${ICON.extlink}<span>${ln.label}</span></a>`).join("")}
+      </div>
+    </div>` : "";
+
+    return `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div data-toggle="${t.id}" style="display:grid; grid-template-columns:240px 1fr 128px 176px 26px; gap:18px; align-items:center; padding:16px 22px; cursor:pointer;">
+        <div>
+          <div style="font-size:16px; font-weight:700; color:var(--fg-1);">${t.name}</div>
+          <span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:${cc}; background:${cbg}; border:1px solid ${cln}; padding:1px 9px; border-radius:var(--radius-pill); margin-top:5px;">${t.cat}</span>
+        </div>
+        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.45;">${t.tag}</div>
+        <div>
+          <div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3);">Serves controls</div>
+          <div style="display:flex; gap:5px; margin-top:5px;">${controlChips}</div>
+        </div>
+        <div>
+          <div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3);">Maturity</div>
+          <div style="font-size:13.5px; font-weight:600; color:var(--fg-1); margin-top:2px;">${t.maturity}</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:${open ? "rotate(180deg)" : "rotate(0deg)"}; transition:transform 160ms cubic-bezier(0.2,0,0,1);"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      ${body}
+    </div>`;
+  }).join("");
+
+  return `<div style="padding:28px; display:grid; gap:16px; max-width:1360px;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">${chips}</div>
+    <div style="font-size:12.5px; color:var(--fg-3); margin-top:-6px;">Representative leaders per control domain &mdash; not an exhaustive list. Capabilities as reported by vendors and public sources; any shortlist is subject to diligence and model-risk review.</div>
+    ${cards}
+  </div>`;
+}
+
+/* ---- COMPARE ---- */
+function viewCompare() {
+  const legend = `<div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:280px;">
+      <div style="font-size:15px; font-weight:700; color:var(--fg-1);">How the leaders compare within each category</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Relative standing of same-category peers &mdash; a qualitative read from public information, not a scored evaluation.</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--fg-3);">
+      <span>Weaker</span>
+      <div style="display:flex; gap:3px;">
+        <span style="width:17px; height:13px; border-radius:3px; background:var(--gray-100);"></span>
+        <span style="width:17px; height:13px; border-radius:3px; background:var(--pnc-blue-050);"></span>
+        <span style="width:17px; height:13px; border-radius:3px; background:var(--pnc-blue-100);"></span>
+        <span style="width:17px; height:13px; border-radius:3px; background:var(--pnc-blue);"></span>
+        <span style="width:17px; height:13px; border-radius:3px; background:var(--pnc-navy);"></span>
+      </div>
+      <span>Stronger</span>
+    </div>
+  </div>`;
+
+  const groups = DOMAINS.filter(d => d.key !== "All").map(d => {
+    const rows = TOOLS.filter(t => t.domain === d.key);
+    if (!rows.length) return "";
+    const headerCols = compareDims.map(dim => `<span>${dim}</span>`).join("");
+    const rowHtml = rows.map(t => {
+      const sc = SCORES[t.id] || [3,3,3,3,3];
+      const url = (t.links && t.links[0]) ? t.links[0].url : "#";
+      const cells = compareDims.map((_, i) => {
+        const sh = compareShade(sc[i]);
+        return `<div style="height:38px; border-radius:var(--radius-sm); background:${sh.bg}; color:${sh.fg}; display:grid; place-items:center; font-family:var(--font-mono); font-size:14px; font-weight:600;">${sc[i]}</div>`;
+      }).join("");
+      return `<div style="display:grid; grid-template-columns:230px repeat(4, 1fr); gap:8px; align-items:center; padding:8px 22px; border-top:1px solid var(--line-1);">
+        <div style="padding-right:12px;">
+          <a href="${url}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:5px; font-size:14px; font-weight:700; color:var(--pnc-blue); text-decoration:none;"><span>${t.name}</span>${ICON.extlink}</a>
+          <div style="font-size:11.5px; color:var(--fg-3); margin-top:2px;">${t.maturity}</div>
+        </div>
+        ${cells}
+      </div>`;
+    }).join("");
+    return `<div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="padding:14px 22px; background:var(--pnc-navy); color:#fff; font-size:13px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;">${d.label}</div>
+      <div style="display:grid; grid-template-columns:230px repeat(4, 1fr); gap:16px; padding:12px 22px 10px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--fg-3); border-bottom:1px solid var(--line-1);">
+        <span>Vendor</span>${headerCols}
+      </div>
+      ${rowHtml}
+    </div>`;
+  }).join("");
+
+  const note = `<div style="display:flex; gap:10px; align-items:flex-start; background:var(--gray-025); border:1px solid var(--line-1); border-radius:var(--radius-md); padding:14px 18px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+    <div style="font-size:12.5px; color:var(--fg-3); line-height:1.5;">Ratings are a relative, five-point read across peers in the same category, drawn from public information and vendor claims (see each vendor&rsquo;s references in Leading Vendors). They are a discussion aid for shortlisting, not a substitute for a formal evaluation, proof-of-value, or model-risk review.</div>
+  </div>`;
+
+  return `<div style="padding:28px; display:grid; gap:20px; max-width:1360px;">${legend}${groups}${note}</div>`;
+}
+
+/* ---- END STATE (Third-party expectations) ---- */
+function viewEndState() {
+  const themes = TP_THEMES.map(p => `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:18px; display:flex; flex-direction:column;">
+    <div style="font-family:var(--font-serif); font-size:17px; font-weight:700; color:var(--pnc-navy); line-height:1.25;">${p.name}</div>
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.5; margin-top:8px; flex:1;">${p.body}</div>
+    <div style="font-family:var(--font-mono); font-size:11.5px; color:var(--fg-3); margin-top:12px;">${p.refs}</div>
+  </div>`).join("");
+
+  const tiers = TP_TIERS.map(t => `<div style="border:1px solid var(--line-1); border-radius:var(--radius-sm); border-top:3px solid ${t.accent}; padding:16px 18px;">
+    <div style="font-size:14px; font-weight:700; color:var(--fg-1);">${t.tier}</div>
+    <div style="font-size:12.5px; color:var(--fg-3); line-height:1.45; margin-top:6px;">${t.scope}</div>
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.5; margin-top:10px; padding-top:10px; border-top:1px solid var(--line-1);">${t.expect}</div>
+  </div>`).join("");
+
+  const surveyRows = VENDORS.map(v => {
+    const [sc, sbg, sln] = scopeMap[v.scope] || scopeMap["All tiers"];
+    return `<div style="display:grid; grid-template-columns:1.15fr 1.1fr 0.95fr 0.8fr; gap:20px; align-items:start; padding:13px 22px; border-top:1px solid var(--line-1);">
+      <div>
+        <span style="display:inline-block; font-size:10px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:${sc}; background:${sbg}; border:1px solid ${sln}; padding:1px 8px; border-radius:var(--radius-pill); margin-bottom:6px;">${v.scope}</span>
+        <div style="font-size:13.5px; font-weight:600; color:var(--fg-1); line-height:1.45;">${v.ask}</div>
+      </div>
+      <span style="font-size:13px; color:var(--fg-2); line-height:1.45;">${v.good}</span>
+      <span style="font-size:13px; color:var(--fg-2); line-height:1.45;">${v.hold}</span>
+      <span style="font-size:13px; color:var(--risk-high); line-height:1.45;">${v.flag}</span>
+    </div>`;
+  }).join("");
+
+  const lifecycle = TP_LIFECYCLE.map(s => `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:18px 20px;">
+    <div style="display:flex; align-items:center; gap:9px;">
+      <span style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:#fff; background:var(--pnc-orange); border-radius:var(--radius-xs); padding:1px 7px;">${s.n}</span>
+      <div style="font-size:14px; font-weight:700; color:var(--fg-1);">${s.step}</div>
+    </div>
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.5; margin-top:10px;">${s.body}</div>
+  </div>`).join("");
+
+  const reciprocal = RECIPROCAL.map(r => `<div style="display:grid; grid-template-columns:220px 1fr 1.35fr; gap:24px; align-items:start; padding:15px 24px; border-top:1px solid var(--line-1);">
+    <div style="font-size:14px; font-weight:700; color:var(--pnc-navy); border-left:3px solid var(--pnc-orange); padding-left:13px; line-height:1.3;">${r.theme}</div>
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.5;">${r.require}</div>
+    <div style="display:flex; gap:9px; align-items:flex-start;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-orange)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>
+      <span style="font-size:13.5px; color:var(--fg-1); font-weight:600; line-height:1.45;">${r.demonstrate}</span>
+    </div>
+  </div>`).join("");
+
+  return `<div style="padding:28px; display:grid; gap:20px; max-width:1400px;">
+
+    <div style="background:var(--pnc-navy); color:#fff; border-radius:var(--radius-md); padding:28px 32px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--pnc-orange);">Third-party &amp; vendor risk</div>
+      <div style="font-family:var(--font-serif); font-size:26px; font-weight:700; line-height:1.25; margin-top:10px; max-width:960px;">Frontier AI risk extends to everyone who touches our data &mdash; our controls are only as strong as our weakest third party.</div>
+      <div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.82); margin-top:12px; max-width:960px;">The same bar we set for ourselves is what we should expect from third parties. Expectations rise with the sensitivity of the data they touch and how much we depend on them. This is what &ldquo;good&rdquo; looks like &mdash; and what to hold them accountable for.</div>
+    </div>
+
+    <div>
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">What we expect from third parties</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Five expectations, each drawn from our own ranked controls</div>
+      <div style="display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; margin-top:14px;">${themes}</div>
+    </div>
+
+    <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:20px 24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">Expectations scale with access</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">How far we push depends on the data a third party touches and our dependence on them</div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;">${tiers}</div>
+    </div>
+
+    <div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="padding:16px 22px 12px;">
+        <div style="font-size:16px; font-weight:700; color:var(--fg-1);">The survey &mdash; what to ask and what to hold them to</div>
+        <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Scoped by vendor tier &mdash; the response that counts, how we make it stick, and the answer that should stop the deal. Continuous testing focuses on critical vendors; lighter tiers rely on attestation.</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1.15fr 1.1fr 0.95fr 0.8fr; gap:20px; padding:8px 22px 10px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3);">
+        <span>What we ask</span><span>What good sounds like</span><span>Hold them to it</span><span style="color:var(--risk-high);">Red flag</span>
+      </div>
+      ${surveyRows}
+    </div>
+
+    <div>
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">Holding them to it across the relationship</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">Expectations are enforced at every stage &mdash; not just at onboarding</div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px;">${lifecycle}</div>
+    </div>
+
+    <div style="background:var(--pnc-navy); color:#fff; border-radius:var(--radius-md); padding:26px 32px; margin-top:4px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--pnc-orange);">When the tables turn</div>
+      <div style="font-family:var(--font-serif); font-size:24px; font-weight:700; line-height:1.25; margin-top:10px; max-width:960px;">The bar we set is the bar we&rsquo;re held to.</div>
+      <div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.82); margin-top:12px; max-width:960px;">We are a third party to our own institutional clients and partners &mdash; the same questions we ask, they ask of us. Every expectation above has a mirror: the evidence we must keep exam-ready to demonstrate in return.</div>
+    </div>
+    <div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="display:grid; grid-template-columns:220px 1fr 1.35fr; gap:24px; padding:13px 24px 11px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); border-bottom:1px solid var(--line-1);">
+        <span>Expectation</span><span>What we require of third parties</span><span style="color:var(--pnc-orange);">What we must demonstrate in return</span>
+      </div>
+      ${reciprocal}
+      <div style="border-top:1px solid var(--line-1); background:var(--gray-025); padding:14px 24px; display:flex; gap:10px; align-items:flex-start;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+        <div style="font-size:12.5px; color:var(--fg-3); line-height:1.5;">Packaged for client due diligence: a SOC 2 Type II report, ISO 27001 certification, and a completed SIG / CAIQ questionnaire &mdash; kept current so the answers we give match the bar we hold others to.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- PROGRESS (Desired end state) ---- */
+function viewProgress() {
+  const pillars = PILLARS.map(p => `<div style="display:grid; grid-template-columns:236px 1fr 1fr 128px; gap:22px; align-items:start; padding:17px 24px; border-top:1px solid var(--line-1);">
+    <div style="font-family:var(--font-serif); font-size:17px; font-weight:700; color:var(--pnc-navy); line-height:1.25; border-left:3px solid var(--pnc-orange); padding-left:13px;">${p.name}</div>
+    <div style="font-size:13.5px; color:var(--fg-1); line-height:1.5;">${p.state}</div>
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.5;">${p.evidence}</div>
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+      ${p.ctrls.map(cn => controlChip(Number(cn), { size: 26, font: "13px" })).join("")}
+    </div>
+  </div>`).join("");
+
+  const audiences = AUDIENCES.map(a => `<div style="display:grid; grid-template-columns:210px 1fr 1.7fr; gap:26px; align-items:start; padding:18px 24px; border-top:1px solid var(--line-1);">
+    <div style="border-left:3px solid var(--pnc-orange); padding-left:14px;">
+      <div style="font-size:16px; font-weight:700; color:var(--pnc-navy); line-height:1.2;">${a.audience}</div>
+      <div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-3); margin-top:6px; line-height:1.4;">${a.cadence}</div>
+    </div>
+    <div style="font-family:var(--font-serif); font-size:17px; font-weight:600; color:var(--fg-1); line-height:1.3; font-style:italic;">&ldquo;${a.question}&rdquo;</div>
+    <div style="display:grid; gap:11px;">
+      ${a.evidence.map(e => `<div style="display:flex; gap:10px; align-items:flex-start;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--pnc-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>
+        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.45;"><b style="color:var(--fg-1); font-weight:700;">${e.a}</b> &mdash; ${e.d}</div></div>`).join("")}
+    </div>
+  </div>`).join("");
+
+  return `<div style="padding:28px; display:grid; gap:20px; max-width:1400px;">
+    <div style="background:var(--pnc-navy); color:#fff; border-radius:var(--radius-md); padding:28px 32px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--pnc-orange);">The destination</div>
+      <div style="font-family:var(--font-serif); font-size:26px; font-weight:700; line-height:1.25; margin-top:10px; max-width:960px;">The desired end state &mdash; five statements that define &ldquo;done.&rdquo;</div>
+      <div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.82); margin-top:12px; max-width:960px;">If we can say each of these with evidence, the frontier AI risk is inside appetite. Every ranked control rolls up to one of them &mdash; and each is written so it can be held to evidence, not activity.</div>
+    </div>
+    <div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="display:grid; grid-template-columns:236px 1fr 1fr 128px; gap:22px; padding:15px 24px 11px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3);">
+        <span>Pillar</span><span>What &ldquo;done&rdquo; means</span><span>How we&rsquo;d know it&rsquo;s true</span><span>Controls</span>
+      </div>
+      ${pillars}
+    </div>
+    <div style="margin-top:4px;">
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">The evidence each audience sees</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">One evidence base, surfaced at the altitude each audience needs &mdash; from the question they ask to the artifact that answers it</div>
+    </div>
+    <div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
+      <div style="display:grid; grid-template-columns:210px 1fr 1.7fr; gap:26px; padding:13px 24px 11px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); border-bottom:1px solid var(--line-1);">
+        <span>Audience</span><span>The question they ask</span><span>Evidence that answers it</span>
+      </div>
+      ${audiences}
+    </div>
+  </div>`;
+}
+
+/* ========================================================================== *
+ *  ===== SEARCH =====                                                        *
+ * ========================================================================== */
+
+/* Both the desktop header input and the mobile search input share state.query. */
+function searchInputs() { return ["search-input", "search-input-m"].map(id => document.getElementById(id)).filter(Boolean); }
+function searchBoxes() { return ["search-dropdown", "search-dropdown-m"].map(id => document.getElementById(id)).filter(Boolean); }
+
+function wireHeader() {
+  searchInputs().forEach(input => {
+    input.value = state.query || "";
+    input.addEventListener("input", () => { state.query = input.value; updateSearchDropdown(); });
+    input.addEventListener("focus", updateSearchDropdown);
+    input.addEventListener("keydown", (e) => { if (e.key === "Escape") { state.query = ""; input.value = ""; closeSearch(); } });
+  });
+}
+
+function closeSearch() {
+  searchBoxes().forEach(box => { box.style.display = "none"; box.innerHTML = ""; });
+}
+
+function updateSearchDropdown() {
+  const boxes = searchBoxes();
+  if (!boxes.length) return;
+  const q = (state.query || "").trim().toLowerCase();
+  if (!q) { closeSearch(); return; }
+
+  const controlHits = CONTROLS
+    .filter(c => (c.name + " " + c.tag + " " + c.why).toLowerCase().includes(q))
+    .map(c => ({ kind: "control", n: c.rank, name: c.name, sub: c.value + " · " + c.tag }));
+  const extHits = EXTENDED
+    .filter(e => (e.name + " " + e.why + " " + e.layer).toLowerCase().includes(q))
+    .map(e => ({ kind: "control", n: Number(e.n), name: e.name, sub: "High · " + e.layer }));
+  const vendorHits = TOOLS
+    .filter(t => (t.name + " " + t.tag + " " + t.detail).toLowerCase().includes(q))
+    .map(t => ({ kind: "vendor", id: t.id, name: t.name, sub: t.cat + " · serves " + t.controls.join(", ") }));
+
+  const group = (label, items) => items.length ? `<div style="padding:8px 14px 4px; font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-3); background:var(--gray-025);">${label}</div>` + items.map(it => {
+    const attr = it.kind === "control" ? `data-control="${it.n}"` : `data-vendor="${it.id}"`;
+    const badge = it.kind === "control"
+      ? `<span style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--pnc-orange); flex:none; width:26px;">${it.n}</span>`
+      : `<span style="flex:none; width:26px; color:var(--pnc-blue);">${ICON.grid}</span>`;
+    return `<div ${attr} style="cursor:pointer; display:flex; gap:8px; align-items:center; padding:9px 14px; border-top:1px solid var(--line-1);" onmouseover="this.style.background='var(--pnc-blue-050)'" onmouseout="this.style.background='#fff'">
+      ${badge}
+      <div style="min-width:0;">
+        <div style="font-size:13.5px; font-weight:600; color:var(--fg-1);">${it.name}</div>
+        <div style="font-size:11.5px; color:var(--fg-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.sub}</div>
+      </div>
+    </div>`;
+  }).join("") : "";
+
+  const total = controlHits.length + extHits.length + vendorHits.length;
+  const html = total
+    ? group("Controls", controlHits.concat(extHits)) + group("Vendors", vendorHits)
+    : `<div style="padding:16px; font-size:13px; color:var(--fg-3);">No matches for &ldquo;${state.query}&rdquo;</div>`;
+  boxes.forEach(box => { box.innerHTML = html; box.style.display = "block"; });
+}
+
+/* ========================================================================== *
+ *  ===== DEEP LINKS (URL hash) =====                                         *
+ * ========================================================================== */
+
+const VALID_VIEWS = ["overview", "controls", "tools", "compare", "endstate", "progress"];
+
+function writeHash() {
+  let h = "#/" + state.view;
+  if (state.view === "controls") h += "/" + state.selected;
+  else if (state.view === "tools" && state.filter !== "All") h += "/" + encodeURIComponent(state.filter);
+  if (location.hash !== h) location.hash = h;
+}
+
+function readHash() {
+  const raw = location.hash.replace(/^#\/?/, "");
+  if (!raw) return;
+  const parts = raw.split("/");
+  if (!VALID_VIEWS.includes(parts[0])) return;
+  state.view = parts[0];
+  if (state.view === "controls" && parts[1]) {
+    const n = Number(parts[1]);
+    if (n >= 1 && n <= 10) state.selected = n;
+  }
+  if (state.view === "tools" && parts[1]) state.filter = decodeURIComponent(parts[1]);
+}
+
+window.addEventListener("hashchange", () => {
+  const before = state.view + "|" + state.selected + "|" + state.filter;
+  readHash();
+  const after = state.view + "|" + state.selected + "|" + state.filter;
+  if (before !== after) render();
+});
+
+/* ========================================================================== *
+ *  ===== EVENT DELEGATION =====                                              *
+ * ========================================================================== */
+
+document.addEventListener("click", (e) => {
+  // Mobile: toggle the nav drawer.
+  const menuToggle = e.target.closest("[data-menu-toggle]");
+  if (menuToggle) { setState({ menuOpen: !state.menuOpen, searchOpen: false }); return; }
+
+  // Mobile: toggle the search panel (and focus it when opening).
+  const searchToggle = e.target.closest("[data-search-toggle]");
+  if (searchToggle) {
+    const willOpen = !state.searchOpen;
+    setState({ searchOpen: willOpen, menuOpen: false });
+    if (willOpen) { const mi = document.getElementById("search-input-m"); if (mi) mi.focus(); }
+    return;
+  }
+
+  const nav = e.target.closest("[data-nav]");
+  if (nav) { setState({ view: nav.getAttribute("data-nav"), query: "", menuOpen: false, searchOpen: false }); return; }
+
+  const goto = e.target.closest("[data-goto]");
+  if (goto) { setState({ view: goto.getAttribute("data-goto"), query: "", menuOpen: false, searchOpen: false }); return; }
+
+  // Cross-link: jump to a control from any numbered chip (top-10 open detail).
+  const ctrl = e.target.closest("[data-control]");
+  if (ctrl) {
+    const n = Number(ctrl.getAttribute("data-control"));
+    const base = { query: "", menuOpen: false, searchOpen: false };
+    setState(n >= 1 && n <= 10 ? Object.assign({ view: "controls", selected: n }, base) : Object.assign({ view: "controls" }, base));
+    return;
+  }
+
+  // Cross-link: jump to a vendor card and expand it.
+  const vendor = e.target.closest("[data-vendor]");
+  if (vendor) {
+    const id = vendor.getAttribute("data-vendor");
+    setState({ view: "tools", filter: "All", open: Object.assign({}, state.open, { [id]: true }), query: "", menuOpen: false, searchOpen: false });
+    const el = document.querySelector('[data-toggle="' + id + '"]');
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  const pick = e.target.closest("[data-pick]");
+  if (pick) { setState({ selected: Number(pick.getAttribute("data-pick")) }); return; }
+
+  const filter = e.target.closest("[data-filter]");
+  if (filter) { setState({ filter: filter.getAttribute("data-filter") }); return; }
+
+  const toggle = e.target.closest("[data-toggle]");
+  if (toggle) {
+    const id = toggle.getAttribute("data-toggle");
+    setState({ open: Object.assign({}, state.open, { [id]: !state.open[id] }) });
+    return;
+  }
+
+  // Click outside the search boxes closes the results dropdown.
+  if (!e.target.closest("#search-wrap") && !e.target.closest(".m-search")) closeSearch();
+});
+
+readHash();
+render();
+</script>
+</body>
+</html>
