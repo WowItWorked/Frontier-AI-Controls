@@ -48,5 +48,5 @@ the `<style>` element.
 Built entirely from publicly available information — vendor websites, public
 benchmarks, press coverage, and analyst commentary (see each vendor card's
 references). It contains no non-public data. Rankings and vendor lists reflect a
-point-in-time view of a fast-moving market and are a decision aid, not a control
-assessment or a procurement recommendation.
+point-in-time view (July 2026) of a fast-moving market and are a decision aid, not a
+control assessment or a procurement recommendation.
