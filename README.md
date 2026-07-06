@@ -1,4 +1,4 @@
-# Frontier AI Controls Dashboard
+# Frontier AI Risk Reduction
 
 An interactive, single-file dashboard summarizing the security controls that most
 reduce **frontier-AI risk** for a large regulated bank — the controls ranked by
