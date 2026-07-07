@@ -532,30 +532,49 @@ const PILLARS = [
   { name: "Our AI is defensible", state: "Every model and agent is inventoried, permissioned, and red-teamed.", evidence: "No agent holds unneeded production access, and AI systems are tested before and after release.", ctrls: ["9"] }
 ];
 
+/* Evidence by audience. Because no settled frontier AI assurance standard exists
+   yet, each audience row separates what already exists to anchor evidence
+   (anchors) from the outcomes technology leadership must build (build). */
 const AUDIENCES = [
   { audience: "Board", cadence: "Quarterly board / risk committee", question: "Are we carrying undue frontier AI risk?",
-    evidence: [
-      { a: "Risk-posture one-pager", d: "open critical exposures and the quarter-over-quarter trend against appetite" },
-      { a: "Control-investment status", d: "the priority controls funded, owned, and on track" },
-      { a: "Independent assurance", d: "internal-audit or external validation that appetite is not breached" }
+    anchors: [
+      { a: "Board-approved risk appetite", d: "the existing appetite framework extends to frontier AI once the board adopts quantitative thresholds for it" },
+      { a: "Existing audit authority", d: "internal audit&rsquo;s charter already covers technology risk &mdash; no new mandate is needed to test against a defined standard" }
+    ],
+    build: [
+      { a: "Quantified appetite thresholds", d: "e.g. no validated attack path to crown-jewel systems open beyond a target number of hours; minimum phishing-resistant coverage &mdash; measurable, so a breach of appetite is a fact, not a judgment" },
+      { a: "Quarterly posture trend", d: "the same metrics every quarter, trended against those thresholds" },
+      { a: "Independent assurance against our own standard", d: "internal audit opines against the published ten-control standard, and external red-team results provide technical validation that needs no framework to interpret" }
     ] },
   { audience: "Regulators", cadence: "Exam-ready, refreshed continuously", question: "Is AI adoption controlled, auditable, and compliant?",
-    evidence: [
-      { a: "Control-to-framework mapping", d: "coverage against FFIEC, NIST AI RMF, and SR 11-7" },
-      { a: "Autonomous-action audit trail", d: "human oversight and full logs for every automated decision" },
-      { a: "Continuous evidence feed", d: "queryable posture replacing point-in-time attestations" }
+    anchors: [
+      { a: "Existing authorities govern today", d: "exams proceed through FFIEC IT and cybersecurity expectations, SR 11-7 model risk, and third-party risk guidance &mdash; applied to AI use, not waiting on an AI rulebook" },
+      { a: "Voluntary frameworks signal intent", d: "NIST AI RMF and ISO/IEC 42001 are not binding, but alignment demonstrates recognized good practice while formal rules mature" }
+    ],
+    build: [
+      { a: "Control-to-obligation mapping", d: "each of the ten controls tied to the existing obligation it satisfies, so examiners see coverage in their own terms" },
+      { a: "AI inventory under model-risk governance", d: "SR 11-7 discipline extended to generative AI and agents &mdash; inventoried, risk-rated, with named owners" },
+      { a: "Autonomous-action audit trail", d: "logged human oversight for every automated containment decision and agent action" },
+      { a: "A documented internal standard", d: "published policies with measurable targets, showing governance running ahead of formal rulemaking" }
     ] },
   { audience: "Executive Committee", cadence: "Monthly and quarterly", question: "Is the risk actively managed to appetite?",
-    evidence: [
-      { a: "Live exposure dashboard", d: "open, validated exposures to crown-jewel systems" },
-      { a: "Remediation metrics", d: "exploitable exposure closed in hours, evidenced continuously" },
-      { a: "End-state scorecard", d: "each statement backed by live evidence, not attestation" }
+    anchors: [
+      { a: "Existing operating discipline", d: "the same SLO and incident-metric machinery already used to run technology, pointed at frontier AI exposure" }
+    ],
+    build: [
+      { a: "Live validated-exposure dashboard", d: "open, exploit-validated paths to crown-jewel systems, by age and owner" },
+      { a: "Hours-based remediation SLOs", d: "time-to-close for exploitable exposure, trended monthly" },
+      { a: "Ten-control scorecard", d: "coverage, funding, and milestones per control, each with a named owner" }
     ] },
   { audience: "Institutional Clients", cadence: "Annual pack, plus on request", question: "Can we trust you with our business?",
-    evidence: [
-      { a: "Due-diligence pack", d: "continuous-validation summary with SOC 2 / ISO mapping" },
-      { a: "Control attestations", d: "phishing-resistant access and verified payment workflows" },
-      { a: "Notification commitments", d: "contractual timelines with named contacts" }
+    anchors: [
+      { a: "SOC 2 Type II / ISO 27001", d: "recognized certifications carry the security evidence &mdash; with audit scope extended to cover AI systems explicitly" },
+      { a: "ISO/IEC 42001", d: "the first certifiable AI-management standard; early certification answers the question client questionnaires are only beginning to ask" }
+    ],
+    build: [
+      { a: "AI-use disclosure pack", d: "where client data touches AI, no-training commitments, and agent permissioning &mdash; the mirror of what we require from our own vendors" },
+      { a: "Continuous-validation summary", d: "exploit-validated posture shared under NDA, in place of point-in-time attestations" },
+      { a: "Contractual commitments", d: "hours-based incident notification with named contacts" }
     ] }
 ];
 
@@ -1294,18 +1313,26 @@ function viewProgress() {
     </div>
   </div>`).join("");
 
-  const audiences = AUDIENCES.map(a => `<div style="display:grid; grid-template-columns:210px 1fr 1.7fr; gap:26px; align-items:start; padding:18px 24px; border-top:1px solid var(--line-1);">
+  const evidenceItem = (e, icon) => `<div style="display:flex; gap:10px; align-items:flex-start;">
+    ${icon}
+    <div style="font-size:13px; color:var(--fg-2); line-height:1.45;"><b style="color:var(--fg-1); font-weight:700;">${e.a}</b> &mdash; ${e.d}</div></div>`;
+  const anchorIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>';
+  const buildIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-orange)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px;"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+
+  const audiences = AUDIENCES.map(a => `<div style="display:grid; grid-template-columns:180px 0.8fr 1.15fr 1.3fr; gap:24px; align-items:start; padding:18px 24px; border-top:1px solid var(--line-1);">
     <div style="border-left:3px solid var(--brand-orange); padding-left:14px;">
       <div style="font-size:16px; font-weight:700; color:var(--brand-navy); line-height:1.2;">${a.audience}</div>
       <div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-3); margin-top:6px; line-height:1.4;">${a.cadence}</div>
     </div>
-    <div style="font-family:var(--font-serif); font-size:17px; font-weight:600; color:var(--fg-1); line-height:1.3; font-style:italic;">&ldquo;${a.question}&rdquo;</div>
-    <div style="display:grid; gap:11px;">
-      ${a.evidence.map(e => `<div style="display:flex; gap:10px; align-items:flex-start;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>
-        <div style="font-size:13.5px; color:var(--fg-2); line-height:1.45;"><b style="color:var(--fg-1); font-weight:700;">${e.a}</b> &mdash; ${e.d}</div></div>`).join("")}
-    </div>
+    <div style="font-family:var(--font-serif); font-size:16px; font-weight:600; color:var(--fg-1); line-height:1.3; font-style:italic;">&ldquo;${a.question}&rdquo;</div>
+    <div style="display:grid; gap:11px;">${a.anchors.map(e => evidenceItem(e, anchorIcon)).join("")}</div>
+    <div style="display:grid; gap:11px;">${a.build.map(e => evidenceItem(e, buildIcon)).join("")}</div>
   </div>`).join("");
+
+  const assuranceGap = `<div style="background:#fff; border:1px solid var(--line-1); border-top:3px solid var(--brand-orange); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:20px 24px;">
+    <div style="font-size:15px; font-weight:700; color:var(--fg-1);">Where assurance comes from when no standard exists yet</div>
+    <div style="font-size:13.5px; color:var(--fg-2); line-height:1.6; margin-top:8px; max-width:1080px;">There is no dedicated frontier AI standard today &mdash; no exam workbook, no certification, no peer benchmark. That does not make independent assurance impossible; it changes what evidence anchors to. It rests on three foundations: <b style="color:var(--fg-1);">existing authorities</b> where they already reach (FFIEC and cybersecurity expectations, SR 11-7 for models, SOC 2 / ISO 27001 for clients); <b style="color:var(--fg-1);">our own published control standard</b> &mdash; the ten controls with quantitative targets &mdash; which gives internal audit and external assessors a benchmark to test against; and <b style="color:var(--fg-1);">exploit-validated technical evidence</b>, which proves posture directly and needs no framework to interpret. Until external standards mature, our standard is the standard &mdash; publishing it, measuring against it, and inviting independent challenge to it is the work.</div>
+  </div>`;
 
   return `<div style="padding:28px; display:grid; gap:20px; max-width:1400px;">
     <div style="background:var(--brand-navy); color:#fff; border-radius:var(--radius-md); padding:28px 32px;">
@@ -1320,12 +1347,13 @@ function viewProgress() {
       ${pillars}
     </div>
     <div style="margin-top:4px;">
-      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">The evidence each audience sees</div>
-      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">One evidence base, surfaced at the altitude each audience needs &mdash; from the question they ask to the artifact that answers it</div>
+      <div style="font-size:16px; font-weight:700; color:var(--fg-1);">The evidence each audience needs &mdash; and what we must build to produce it</div>
+      <div style="font-size:12.5px; color:var(--fg-3); margin-top:2px;">For each audience: the question they ask, what already exists to anchor the answer, and the outcomes technology leadership must build where no standard yet reaches</div>
     </div>
+    ${assuranceGap}
     <div data-r="scrollx" style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
-      <div style="display:grid; grid-template-columns:210px 1fr 1.7fr; gap:26px; padding:13px 24px 11px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); border-bottom:1px solid var(--line-1);">
-        <span>Audience</span><span>The question they ask</span><span>Evidence that answers it</span>
+      <div style="display:grid; grid-template-columns:180px 0.8fr 1.15fr 1.3fr; gap:24px; padding:13px 24px 11px; font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--fg-3); border-bottom:1px solid var(--line-1);">
+        <span>Audience</span><span>The question they ask</span><span style="color:var(--brand-blue);">What exists to anchor it today</span><span style="color:var(--brand-orange);">What we must build</span>
       </div>
       ${audiences}
     </div>
