@@ -111,7 +111,7 @@ a { color:inherit; }
  * ========================================================================== */
 
 const CONTROLS = [
-  { rank: 1, id: "c1", name: "Continuous autonomous exposure validation", tag: "Always-on AI red teaming", value: "Critical", baseline: "Partial",
+  { rank: 1, id: "c1", name: "Continuous autonomous exposure validation", tag: "Always-on AI red teaming", value: "Critical",
     layer: "Assurance layer — the feedback loop that measures whether every other control actually works.",
     ifFails: "We manage risk on assumptions; exploitable gaps sit open between assessments and the adversary finds them first.",
     why: "AI attack agents probe every path in parallel, around the clock — a point-in-time pentest measures last quarter’s risk. Continuous autonomous validation is the one control that answers “are we exploitable right now,” and it feeds every other control with proof instead of theory.",
@@ -121,7 +121,7 @@ const CONTROLS = [
       { f: "Point-in-time assessment report", t: "Continuous, decision-grade evidence of posture" }
     ],
     measure: ["Share of the estate under continuous validation", "Median time from exposure to validated finding", "Open validated kill chains to crown-jewel systems"] },
-  { rank: 2, id: "c2", name: "Phishing-resistant MFA & identity proofing", tag: "FIDO2 everywhere, verified resets", value: "Critical", baseline: "In place",
+  { rank: 2, id: "c2", name: "Phishing-resistant MFA & identity proofing", tag: "FIDO2 everywhere, verified resets", value: "Critical",
     layer: "Identity perimeter — the first barrier between an outside attacker and an inside foothold.",
     ifFails: "Credential phishing and help desk social engineering hand over legitimate access, and every later control is left defending against a ‘trusted’ user.",
     why: "Generated voice, video, and tailored lures collapse the cost of convincing impersonation. OTP, push approvals, and help desk resets — the residual weak points of a mature MFA program — are now the front door of most modern intrusions.",
@@ -131,7 +131,7 @@ const CONTROLS = [
       { f: "Convenience carve-outs for executives", t: "Executives held to the strictest standard" }
     ],
     measure: ["FIDO2 coverage across workforce and contractors", "Resets completed without verified identity", "MFA-fatigue and push-bombing events"] },
-  { rank: 3, id: "c3", name: "Machine-speed vulnerability remediation", tag: "Hours, not 30-day SLAs", value: "Critical", baseline: "In place",
+  { rank: 3, id: "c3", name: "Machine-speed vulnerability remediation", tag: "Hours, not 30-day SLAs", value: "Critical",
     layer: "Prevention layer — closes exploitable openings before they can be used.",
     ifFails: "Known-exploitable vulnerabilities stay open past the exploit window, and initial access becomes routine for an AI-equipped attacker.",
     why: "Public research shows exploit development compressing from weeks toward hours, while finding volume grows faster than human remediation capacity. A 30-day patch SLA — fully compliant under current policy — concedes the entire window to an AI-equipped attacker.",
@@ -141,7 +141,7 @@ const CONTROLS = [
       { f: "Manual tickets and fix research", t: "Auto-generated fixes, verified by re-test" }
     ],
     measure: ["Median time-to-remediate validated exploitable findings", "Share of fixes auto-generated and merged", "Age of oldest internet-facing exploitable exposure"] },
-  { rank: 4, id: "c4", name: "Zero standing privilege", tag: "Just-in-time, time-boxed elevation", value: "Critical", baseline: "In place",
+  { rank: 4, id: "c4", name: "Zero standing privilege", tag: "Just-in-time, time-boxed elevation", value: "Critical",
     layer: "Privilege layer — limits what any single compromised identity is able to do.",
     ifFails: "One phished account becomes domain-wide control; standing admin turns a foothold into a full takeover in minutes.",
     why: "Agentic attackers chain identity misconfigurations in minutes — faster than any recertification cycle can catch. Standing admin rights are the fuel for machine-speed lateral movement; removing them starves the attack chain.",
@@ -151,7 +151,7 @@ const CONTROLS = [
       { f: "Shared break-glass credentials", t: "Isolated, recorded, monitored sessions" }
     ],
     measure: ["Count of standing privileged accounts", "Median elevation duration", "Entitlement anomalies auto-revoked per month"] },
-  { rank: 5, id: "c5", name: "Non-human identity governance", tag: "Keys, service accounts, agent credentials", value: "High", baseline: "Partial",
+  { rank: 5, id: "c5", name: "Non-human identity governance", tag: "Keys, service accounts, agent credentials", value: "High",
     layer: "Machine-identity layer — governs the credentials that outnumber and outlast human ones.",
     ifFails: "Orphaned keys and over-privileged service and agent accounts become persistent backdoors that survive offboarding and password resets.",
     why: "Service accounts, API keys, and AI-agent credentials outnumber people many times over and are the least-governed identities in the estate. Every new agent deployment multiplies them — and each ungoverned credential is a ready-made attack path.",
@@ -161,7 +161,7 @@ const CONTROLS = [
       { f: "Broad service scopes", t: "Least privilege per key, token, and agent" }
     ],
     measure: ["Non-human identities without a named owner", "Median secret age", "Agent credentials with write access to production"] },
-  { rank: 6, id: "c6", name: "AI-aware detection & autonomous response", tag: "Pre-approved containment at machine speed", value: "High", baseline: "In place",
+  { rank: 6, id: "c6", name: "AI-aware detection & autonomous response", tag: "Pre-approved containment at machine speed", value: "High",
     layer: "Detection & response layer — catches and contains what prevention misses.",
     ifFails: "Intrusions dwell undetected or are contained too slowly, and machine-speed lateral movement finishes before humans can react.",
     why: "Lateral movement at machine speed outruns any human triage queue. If containment requires a meeting, it happens after the data is gone — response authority has to be decided before the incident, not during it.",
@@ -171,7 +171,7 @@ const CONTROLS = [
       { f: "Signature-led detections", t: "Detections tuned to AI attack patterns" }
     ],
     measure: ["Mean time to contain", "Share of incidents auto-contained", "Detection coverage against AI-driven TTPs"] },
-  { rank: 7, id: "c7", name: "Egress & shadow-AI data controls", tag: "Prompt-level DLP, sanctioned gateway", value: "High", baseline: "Partial",
+  { rank: 7, id: "c7", name: "Egress & shadow-AI data controls", tag: "Prompt-level DLP, sanctioned gateway", value: "High",
     layer: "Data-exfiltration layer — the last line before sensitive data leaves.",
     ifFails: "Sensitive data walks out through prompts and model APIs unseen, turning an intrusion into a data-loss and regulatory event.",
     why: "Sensitive data now leaves through prompts and model APIs, not just email and removable media. Unsanctioned AI use is invisible to legacy DLP — and banning it merely pushes it further out of sight.",
@@ -181,7 +181,7 @@ const CONTROLS = [
       { f: "Blanket bans on AI tools", t: "A sanctioned AI gateway people actually use" }
     ],
     measure: ["Shadow-AI endpoints observed on the network", "Sensitive prompts blocked at the gateway", "Share of AI traffic through sanctioned paths"] },
-  { rank: 8, id: "c8", name: "Identity-based microsegmentation", tag: "Blast-radius limits per workload", value: "High", baseline: "Partial",
+  { rank: 8, id: "c8", name: "Identity-based microsegmentation", tag: "Blast-radius limits per workload", value: "High",
     layer: "Containment layer — caps the blast radius once an attacker is already inside.",
     ifFails: "A single foothold reaches the whole estate; one compromised host becomes an enterprise-wide incident.",
     why: "Swarming attacks exploit flat internal paths — one foothold becomes many in minutes. Segmentation is the control that caps the blast radius when, not if, something gets in.",
@@ -191,7 +191,7 @@ const CONTROLS = [
       { f: "Crown jewels segmented last", t: "Crown jewels segmented first" }
     ],
     measure: ["Reachable paths to crown-jewel systems", "East-west traffic under explicit policy", "Segment policy violations per month"] },
-  { rank: 9, id: "c9", name: "Secure AI system lifecycle", tag: "Guardrails for our own models & agents", value: "High", baseline: "Net new",
+  { rank: 9, id: "c9", name: "Secure AI system lifecycle", tag: "Guardrails for our own models & agents", value: "High",
     layer: "Application & AI layer — secures the new systems we build and run.",
     ifFails: "Our own models and agents become the attack path — prompt injection, tool misuse, and over-permissioned agents acting on production.",
     why: "Our own models and agents are a new attack surface: prompt injection, tool misuse, data poisoning, and over-permissioned agents acting on production systems. No existing control family covers this — it has to be built.",
@@ -201,7 +201,7 @@ const CONTROLS = [
       { f: "Ship and forget", t: "Continuous red-teaming of AI systems" }
     ],
     measure: ["AI systems inventoried and risk-rated", "Prompt-injection findings per assessment", "Agents with write access to production"] },
-  { rank: 10, id: "c10", name: "Deepfake-resilient verification", tag: "Out-of-band, dual control", value: "High", baseline: "Net new",
+  { rank: 10, id: "c10", name: "Deepfake-resilient verification", tag: "Out-of-band, dual control", value: "High",
     layer: "Human & process layer — protects decisions that technology alone cannot authenticate.",
     ifFails: "A convincing voice or video authorizes fraudulent payments and changes; controls that assume ‘we recognize the caller’ fail silently.",
     why: "Voice and video no longer prove identity, and payments, credential resets, and change approvals are exactly what an impersonation attack targets. The process must hold even when the request is indistinguishable from the real person.",
@@ -650,13 +650,6 @@ function setState(patch) {
 
 const valueBg = { Critical: "var(--risk-critical)", High: "var(--risk-high)" };
 
-/* Current-state baseline colors (assumes a mature large-bank program): [fg, bg, line] */
-const baseMap = {
-  "In place": ["var(--success)", "var(--success-bg)", "var(--success-line)"],
-  "Partial": ["var(--warning)", "var(--warning-bg)", "var(--warning-line)"],
-  "Net new": ["var(--info)", "var(--info-bg)", "var(--info-line)"]
-};
-
 const domainMap = {
   Validate: ["var(--brand-blue)", "var(--brand-blue-050)", "var(--info-line)"],
   Remediate: ["var(--brand-orange-700)", "var(--brand-orange-050)", "var(--brand-orange-100)"],
@@ -690,7 +683,7 @@ function compareShade(s) {
 
 const VIEW_TITLES = {
   overview: "Overview & methodology",
-  controls: "Frontier AI — top 10 controls",
+  controls: "Control rankings — ranked by risk-reduction value",
   tools: "Leading vendors — mapped to the ranked controls",
   compare: "Vendor comparison — peers within each control category",
   endstate: "What we expect from third parties",
@@ -934,7 +927,7 @@ function viewControls() {
   const sel = CONTROLS.find(c => c.rank === state.selected) || CONTROLS[0];
 
   const kpis = `<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:20px;">
-    ${kpiCard("Controls ranked", "10", "var(--brand-navy)", "the top tier, in full detail below")}
+    ${kpiCard("Controls ranked in detail", "10", "var(--brand-navy)", "justification, required shift, metrics, and vendors below")}
     ${kpiCard("Critical value", "4", "var(--risk-critical)", "validation, identity, remediation speed, privilege")}
     ${kpiCard("Additional high-value", "+10", "var(--brand-navy)", "controls 11&ndash;20, rounding out the High tier")}
     ${kpiCard("Leading vendors mapped", String(TOOLS.length), "var(--brand-blue)", "across the full control set")}
@@ -942,7 +935,6 @@ function viewControls() {
 
   const rankedList = CONTROLS.map(c => {
     const bg = state.selected === c.rank ? "var(--brand-blue-050)" : "#fff";
-    const [bc, bbg, bln] = baseMap[c.baseline];
     return `<div data-pick="${c.rank}" style="display:grid; grid-template-columns:40px 1fr auto; gap:12px; align-items:center; padding:11px 20px; border-top:1px solid var(--line-1); cursor:pointer; background:${bg};">
       <span style="font-family:var(--font-mono); font-size:17px; font-weight:600; color:var(--brand-orange);">${c.rank}</span>
       <div style="min-width:0;">
@@ -951,7 +943,6 @@ function viewControls() {
       </div>
       <div style="display:grid; gap:4px; justify-items:end;">
         <span style="font-size:11px; font-weight:700; color:#fff; background:${valueBg[c.value]}; padding:2px 9px; border-radius:var(--radius-pill); white-space:nowrap;">${c.value}</span>
-        <span style="font-size:10px; font-weight:700; color:${bc}; background:${bbg}; border:1px solid ${bln}; padding:1px 7px; border-radius:var(--radius-pill); white-space:nowrap;">${c.baseline}</span>
       </div>
     </div>`;
   }).join("");
@@ -970,7 +961,6 @@ function viewControls() {
   // Derived from the vendor data (TOOLS) so the control cards and vendor views cannot drift apart.
   const selVendors = TOOLS.filter(t => t.controls.includes(String(sel.rank))).map(t => t.name);
   const toolTags = selVendors.map(t => `<span style="font-size:12.5px; font-weight:600; color:var(--fg-1); background:var(--bg-2); border:1px solid var(--line-2); padding:4px 12px; border-radius:var(--radius-pill);">${t}</span>`).join("");
-  const [sbc, sbbg, sbln] = baseMap[sel.baseline];
 
   const detail = `<div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); padding:24px 28px;">
     <div style="display:flex; align-items:flex-start; gap:18px;">
@@ -979,7 +969,6 @@ function viewControls() {
         <div style="font-size:21px; font-weight:700; color:var(--fg-1); letter-spacing:-0.01em; line-height:1.25;">${sel.name}</div>
         <div style="display:flex; gap:8px; margin-top:8px;">
           <span style="font-size:11.5px; font-weight:700; color:#fff; background:${valueBg[sel.value]}; padding:2px 9px; border-radius:var(--radius-pill);">${sel.value} value</span>
-          <span style="font-size:11.5px; font-weight:700; color:${sbc}; background:${sbbg}; border:1px solid ${sbln}; padding:2px 9px; border-radius:var(--radius-pill);">${sel.baseline} today</span>
         </div>
       </div>
     </div>
@@ -1039,7 +1028,7 @@ function viewControls() {
     <div style="display:grid; grid-template-columns:minmax(380px,430px) 1fr; gap:20px; align-items:start;">
       <div style="background:#fff; border:1px solid var(--line-1); border-radius:var(--radius-md); box-shadow:var(--shadow-xs); overflow:hidden;">
         <div style="padding:16px 20px 12px;">
-          <div style="font-size:15px; font-weight:700; color:var(--fg-1);">Ranked controls</div>
+          <div style="font-size:15px; font-weight:700; color:var(--fg-1);">Top 10 controls by risk-reduction value</div>
           <div style="font-size:12px; color:var(--fg-3); margin-top:2px;">Select a control to see justification and required shift</div>
         </div>
         ${rankedList}
